@@ -1,0 +1,8 @@
+package: media_manager/srcset
+version: '1.0'
+author: 'FriendsOfRedaxo'
+supportpage: www.redaxo.org/de/forum/
+
+requires:
+    packages:
+        media_manager: '>=2.1.0'

@@ -62,10 +62,15 @@ zunächst das Standardbild (im SRC-Attribut). Wird das Script aus
 
     assets/addons/media_manager/plugins/srcset/srcset.js
 
-eingenunden, wird beim Laden der Seite sowie nach einem Resize eine Routine ausgeführt, die
+eingebunden, wird beim Laden der Seite sowie nach einem Resize eine Routine ausgeführt, die
 die Anzeigebreite jedes Elements checkt und ggf. eine neue Datei dazu lädt. So lässt sich
 im SRCSET Attribute eine Breite nicht abhängig vom Viewport sondern von der tatsächlich
-angezeigten Breite des Elements nutzen.
+angezeigten Breite des Elements nutzen. Bitte beachten, dass das Bild dann als CSS-Eigenschaft
+
+    width : 100%;
+    height: auto;
+
+erhalten muss.
 
     <script type="text/javascript" src="assets/addons/media_manager/plugins/srcset/srcset.js"></script>
 

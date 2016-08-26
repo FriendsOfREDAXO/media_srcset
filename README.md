@@ -54,6 +54,41 @@ Die einzelnen SRCSET-Attribute lassen sich dann innerhalb des Tenmplates über d
         </picture>
     //-->
 
+
+srcset.js
+-------
+Das SRCSET Attribut kann auch als data-srcset Attribut eingebunden werden. Dann lädt der Browser
+zunächst das Standardbild (im SRC-Attribut). Wird das Script aus
+
+    assets/addons/media_manager/plugins/srcset/srcset.js
+
+eingenunden, wird beim Laden der Seite sowie nach einem Resize eine Routine ausgeführt, die
+die Anzeigebreite jedes Elements checkt und ggf. eine neue Datei dazu lädt. So lässt sich
+im SRCSET Attribute eine Breite nicht abhängig vom Viewport sondern von der tatsächlich
+angezeigten Breite des Elements nutzen.
+
+    <script type="text/javascript" src="assets/addons/media_manager/plugins/srcset/srcset.js"></script>
+
+    <img width="500" src="index.php?rex_media_type=ImgTypeName&rex_media_file=ImageFileName" data-srcset="rex_media_type=ImgTypeName" />
+    <!-- Outputs to
+        <img src="index.php?rex_media_type=ImgTypeName__700&rex_media_file=ImageFileName"
+            data-srcset="index.php?rex_media_type=ImgTypeName__400&rex_media_file=ImageFileName 480w
+                    index.php?rex_media_type=ImgTypeName__700&rex_media_file=ImageFileName 768w
+                    index.php?rex_media_type=ImgTypeName__800&rex_media_file=ImageFileName 960w
+            " />
+    //-->
+
+    <img width="200" ... />
+    <!-- Outputs to
+        <img src="index.php?rex_media_type=ImgTypeName__400&rex_media_file=ImageFileName" ... />
+    //-->
+
+    <img width="1200" ... />
+    <!-- Outputs to
+        <img src="index.php?rex_media_type=ImgTypeName__960&rex_media_file=ImageFileName" ... />
+    //-->
+
+
 ---
 Credits
 -------

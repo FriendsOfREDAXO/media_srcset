@@ -32,12 +32,16 @@ var srcset = {
     {
         if(picture = this.getPictureElement(element))
         {
-            return picture.offsetWidth;
+            width = picture.offsetWidth;
         }
         else
         {
-            return element.offsetWidth;
+            width = element.offsetWidth;
         }
+
+        width*= window.devicePixelRatio || 1;
+
+        return width;
     },
 
     getSrcsetItems : function(element)

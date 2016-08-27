@@ -78,8 +78,7 @@ class rex_media_manager_srcset
             if($p !== false)
             {
                 // split it!
-                $type = substr($params['rex_media_type'], 0, $p);
-                $size = substr($params['rex_media_type'], $p + 2);
+                list($type, $size) = explode($params['rex_media_type'], '__', 2);
                 $size = (int) preg_replace('/[^0-9]/', '', $size);
 
                 // get the effects for the requested media manager profile

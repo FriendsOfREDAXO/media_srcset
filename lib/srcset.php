@@ -154,9 +154,9 @@ class rex_media_manager_srcset
                 // the URL matches the schema of these plugins
                 // supported plugins: yRewrite, rewrite_url
                 $regex = '/(\/|^)(images|imagetypes|media_file)\/[^\/]+\/(.*)$/';
-                if(preg_match($regex, $match[2]))
+                if(preg_match($regex, $match[2], $_match))
                 {
-                    $image = preg_replace($regex, "$3", $match[2]);
+                    $image = $_match[3];
                 }
                 else
                 {
@@ -356,7 +356,7 @@ class rex_media_manager_srcset
         if(rex_addon::exists('yrewrite'))
         {
             // if yRewrite plugin is installed we can create a rewrite URL...
-            $url = "/images/$type/$filename";
+            $url = rtrim(rex_url::frontend(), '/') ."/images/$type/$filename";
         }
         else if(rex_addon::exists('rewrite_url'))
         {

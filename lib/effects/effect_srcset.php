@@ -6,8 +6,6 @@
 
 class rex_effect_srcset extends rex_effect_resize
 {
-    protected $bla;
-
     public function getParams()
     {
         $params = [];

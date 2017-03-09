@@ -6,7 +6,7 @@
  * Class containing functions for inclusion via EXTENSION_POINTS - see boot.php for details
  */
 
-class rex_media_manager_srcset
+class rex_media_srcset
 {
     /**
      * Replaces all occurences of srcset="rex_media_type=[profile_name]" with the set up source sets
@@ -70,58 +70,49 @@ class rex_media_manager_srcset
     {
         $params = $ep->getParams(); // let's get the parameters
         $subject = $ep->getSubject(); // and the effects array
+        $db_uscore = strpos($params['rex_media_type'],'__');
 
-        if(empty($subject) && !empty($params['rex_media_type']))
+        if($db_uscore > 0)
         {
-            // let's split the media type name by a double underscore - deviding (a) the valid profile name and (b) the requested size
-            $p = strpos($params['rex_media_type'],'__');
-            if($p !== false)
-            {
-                // split it!
-                $type = substr($params['rex_media_type'], 0, $p);
-                $size = substr($params['rex_media_type'], $p + 2);
-                $size = (int) preg_replace('/[^0-9]/', '', $size);
+            // split it!
+            $type = substr($params['rex_media_type'], 0, $db_uscore);
+            $size = substr($params['rex_media_type'], $db_uscore + 2);
+            $size = (int) preg_replace('/[^0-9]/', '', $size);
 
-                // get the effects for the requested media manager profile
-                $effects = static::getEffectsFromType($type);
+            // get the effects for the requested media manager profile
+            $effects = static::getEffectsFromType($type);
 
-                if($size > 0 && !empty($effects))
-                {
-                    // make sure the size is contained within the source set
-                    $size = static::provideValidSize($size, $type);
+            if ($size > 0 && !empty($effects)) {
+                // make sure the size is contained within the source set
+                $size = static::provideValidSize($size, $type);
 
-                    // size is given and the requested media manager profile exists
-                    // let's get the source sets of the profile
-                    $srcsets = static::getSrcSetByMediaType($type);
+                // size is given and the requested media manager profile exists
+                // let's get the source sets of the profile
+                $srcsets = static::getSrcSetByMediaType($type);
 
-                    foreach($srcsets as $srcset => $srcset_params)
-                    {
-                        if(isset($srcset_params[(string) $size]))
-                        {
-                            // the size is included in list of provided sizes from the profile
-                            foreach($effects as $i => $effect)
-                            {
-                                if(!empty($effect['params']['srcset']) && $effect['params']['srcset'] == $srcset)
-                                {
-                                    // only reset the default width of the profile with the requested one,
-                                    // if the profile's srcset parameter matches exactliy the one related to this size
-                                    $effects[$i]['params']['width'] = $size;
-                                }
+                foreach ($srcsets as $srcset => $srcset_params) {
+                    if (isset($srcset_params[(string) $size])) {
+                        // the size is included in list of provided sizes from the profile
+                        foreach ($effects as $i => $effect) {
+                            if (!empty($effect['params']['srcset']) && $effect['params']['srcset'] == $srcset) {
+                                // only reset the default width of the profile with the requested one,
+                                // if the profile's srcset parameter matches exactliy the one related to this size
+                                $effects[$i]['params']['width'] = $size;
                             }
-                            unset($i, $effect);
                         }
+                        unset($i, $effect);
                     }
-                    unset($srcset, $srcset_params);
-
-                    // set the effects array
-                    $subject = $effects;
-
-                    unset($srcsets);
                 }
+                unset($srcset, $srcset_params);
 
-                unset($effects, $size, $type);
+                // set the effects array
+                $subject = $effects;
+
+                unset($srcsets);
             }
-            unset($p);
+
+            unset($effects, $size, $type);
+            unset($db_uscore);
         }
 
         // return the effects array

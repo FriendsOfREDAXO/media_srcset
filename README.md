@@ -1,14 +1,14 @@
-media_manager / srcset
+media_srcset
 ======================
 
-Plugin für das media_manager-Addon, das einen neuen Effekt namens SRCSET hinzufügt (basierend auf dem resize-Effekt) und zusätzlich die Angabe eines SRCSET-Attributs ermöglicht.
+Addon das einen neuen Effekt namens SRCSET hinzufügt (basierend auf dem resize-Effekt) und zusätzlich die Angabe eines SRCSET-Attributs ermöglicht.
 
 Installation
 ------------
 
 * Release herunterladen und entpacken.
 * Ordner umbenennen in `srcset`.
-* In den Plugins-Ordner des MediaManager AddOns legen: `/redaxo/src/addons/media_manager/plugins`.
+* In den Plugins-Ordner des MediaManager AddOns legen: `/redaxo/src/addons`.
 
 Verwendung
 ----------
@@ -70,7 +70,7 @@ srcset.js
 
 Das SRCSET Attribut kann auch als data-srcset Attribut eingebunden werden. Dann lädt der Browser zunächst das Standardbild (im SRC-Attribut). Wird das Script aus
 
-`assets/addons/media_manager/plugins/srcset/srcset.js`
+`assets/addons/media_srcset/srcset.js`
 
 eingebunden, wird beim Laden der Seite sowie nach einem Resize eine Routine ausgeführt, die die Anzeigebreite jedes Elements checkt und ggf. eine neue Datei dazu lädt. So lässt sich im SRCSET Attribute eine Breite nicht abhängig vom Viewport sondern von der tatsächlich angezeigten Breite des Elements nutzen. Bitte beachten, dass das Bild dann als CSS-Eigenschaft
 
@@ -84,7 +84,7 @@ erhalten muss.
 Eingabe:
 
 ```html
-<script type="text/javascript" src="assets/addons/media_manager/plugins/srcset/srcset.js"></script>
+<script type="text/javascript" src="assets/addons/media_srcset/srcset.js"></script>
 
 <img width="500" src="index.php?rex_media_type=ImgTypeName&rex_media_file=ImageFileName"
     data-srcset="rex_media_type=ImgTypeName">

@@ -1,0 +1,5 @@
+media_manager_effect_param_srcset_label = SRCSET-Atributo
+media_manager_effect_param_srcset_notice = por exemplo: "{0}"
+media_manager_effect_param_srcset_help = Os atributos individuais SRCSET podem então ser inseridos no nome do perfil:
+media_manager_effect_param_width_label = largura standar
+media_manager_effect_param_width_notice = Aparece em navegadores sem o suporte SRCSET

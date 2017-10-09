@@ -1,0 +1,5 @@
+media_manager_effect_param_srcset_label = SRCSET attribut
+media_manager_effect_param_srcset_notice = t. ex. "{0}"
+media_manager_effect_param_srcset_help = Dem individuella SRCSET attribut kan sedan sättas för varje fil individuellt:
+media_manager_effect_param_width_label = Standardbredd
+media_manager_effect_param_width_notice = Kommer att visas i webbläsare som inte stöder SRCSET

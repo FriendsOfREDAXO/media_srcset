@@ -1,8 +1,9 @@
 package: media_srcset
-version: '1.0'
+version: '2.0'
 author: 'FriendsOfRedaxo'
 supportpage: www.redaxo.org/de/forum/
 
 requires:
     packages:
-        media_manager: '>=2.1.0'
+        media_manager: '>=2.5.6'
+    redaxo: '>=5.4.0'

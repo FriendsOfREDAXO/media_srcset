@@ -145,7 +145,7 @@ class rex_media_srcset
                 // now we try to find the filename if any rewrite plugin is activated and
                 // the URL matches the schema of these plugins
                 // supported plugins: yRewrite, rewrite_url
-                $regex = '/(\/|^)(images|imagetypes|media_file)\/[^\/]+\/(.*)$/';
+                $regex = '/(\/|^)(images|imagetypes|media_file|media|mediatypes)\/[^\/]+\/(.*)$/';
                 if(preg_match($regex, $match[2], $_match))
                 {
                     $image = $_match[3];

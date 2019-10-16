@@ -1,6 +1,6 @@
 # media_srcset
 
-Addon das einen neuen Effekt namens SRCSET hinzufügt (basierend auf dem resize-Effekt) und zusätzlich die Angabe eines SRCSET-Attributs ermöglicht.
+Addon das einen neuen Effekt namens SRCSET hinzufügt (basierend auf dem resize-Effekt) und zusätzlich die Angabe eines SRCSET-Attributs ermöglicht.Rewrite URLs von YRewrite werden unterstützt. 
 
 ## Installation
 

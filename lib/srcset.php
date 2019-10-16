@@ -193,7 +193,7 @@ class rex_media_srcset
                     $srcset = join(', ', $srcsets);
 
                     // and replace '{rex_media_file}' with the correct image filename
-                    $srcset = str_replace('{rex_media_file}', $imgsrc, $srcset);
+                    $srcset = str_replace(['{rex_media_file}','%7Brex_media_file%7D'], $imgsrc, $srcset);
 
                     // set the replacing string
                     $destination = 'srcset="' . $srcset . '"';

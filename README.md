@@ -7,8 +7,8 @@ Installation
 ------------
 
 * Release herunterladen und entpacken.
-* Ordner umbenennen in `srcset`.
-* In den Plugins-Ordner des MediaManager AddOns legen: `/redaxo/src/addons`.
+* Ordner umbenennen in `media_srcset`.
+* In den AddOns-Ordner legen: `/redaxo/src/addons`.
 
 Verwendung
 ----------

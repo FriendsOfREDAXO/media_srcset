@@ -345,34 +345,14 @@ class rex_media_srcset
     {
         $filename = ltrim($filename, '/');
 
-        if(rex_addon::exists('yrewrite') && rex_addon::get('yrewrite')->isAvailable())
-        {
-            // if yRewrite plugin is installed we can create a rewrite URL...
-            $url = rtrim(rex_url::frontend(), '/') ."/images/$type/$filename";
-        }
-        else if(rex_addon::exists('rewrite_url') && rex_addon::get('rewrite_url')->isAvailable())
+        if(rex_addon::exists('rewrite_url') && rex_addon::get('rewrite_url')->isAvailable())
         {
             // if the rewrite_url plugin is installed, we create the url for this addon
             $url = "/media_file/$type/$filename";
         }
         else
         {
-            // set up the URL by using default rex functions
-            $params = [
-                'rex_media_type' => $type,
-                'rex_media_file' => $filename
-            ];
-
-            if(rex::isBackend())
-            {
-                // for backend
-                $url =  rex_url::backendController($params);
-            }
-            else
-            {
-                // for frontend
-                $url = rex_url::frontendController($params);
-            }
+            $url = rex_media_manager::getUrl($type, $filename);
         }
 
         return $url;
@@ -452,5 +432,3 @@ class rex_media_srcset
         return $srcset;
     }
 }
-
- ?>

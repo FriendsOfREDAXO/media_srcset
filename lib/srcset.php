@@ -253,7 +253,7 @@ class rex_media_srcset
         $effects = [];
 
         // create fake mediaobject
-        if($media = new rex_managed_media('/'))
+        if($media = new rex_managed_media(''))
         {
             // create a fake media manager
             if($manager = new rex_media_manager($media))

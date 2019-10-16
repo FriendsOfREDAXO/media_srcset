@@ -1,3 +1,4 @@
+media_manager_effect_srcset = Image: SRCSET
 media_manager_effect_param_srcset_label = SRCSET attribute
 media_manager_effect_param_srcset_notice = ex. "{0}"
 media_manager_effect_param_srcset_help = Each SRCSET attributes can be set by each file individually

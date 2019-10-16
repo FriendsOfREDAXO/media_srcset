@@ -1,3 +1,4 @@
+media_manager_effect_srcset = Image: SRCSET
 media_manager_effect_param_srcset_label = Attributi SRCSET
 media_manager_effect_param_srcset_notice = ad es. "{0}"
 media_manager_effect_param_srcset_help = 

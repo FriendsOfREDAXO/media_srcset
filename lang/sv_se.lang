@@ -1,3 +1,4 @@
+media_manager_effect_srcset = Image: SRCSET
 media_manager_effect_param_srcset_label = SRCSET attribut
 media_manager_effect_param_srcset_notice = t. ex. "{0}"
 media_manager_effect_param_srcset_help = Dem individuella SRCSET attribut kan sedan sättas för varje fil individuellt:

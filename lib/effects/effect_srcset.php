@@ -6,6 +6,11 @@
 
 class rex_effect_srcset extends rex_effect_resize
 {
+    public function getName()
+    {
+        return rex_i18n::msg('media_manager_effect_srcset');
+    }
+
     public function getParams()
     {
         $params = [];

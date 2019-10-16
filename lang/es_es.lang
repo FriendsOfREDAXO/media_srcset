@@ -1,3 +1,4 @@
+media_manager_effect_srcset = Imagen: SRCSET
 media_manager_effect_param_srcset_label = Atributo SRCSET
 media_manager_effect_param_srcset_notice = por ejemplo, "{0}"
 media_manager_effect_param_srcset_help = Los atributos SRCSET individuales se pueden insertar a través del nombre del perfil:

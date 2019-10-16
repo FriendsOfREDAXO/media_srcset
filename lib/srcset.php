@@ -137,7 +137,8 @@ class rex_media_srcset
             $regex = '/rex_media_file=([^\&]+)/i';
             if(preg_match($regex, $match[2]))
             {
-                $image = preg_replace($regex, "$1", $match[2]);
+                preg_match($regex, $match[2], $_match);
+                $image = $_match[1];
             }
             else
             {

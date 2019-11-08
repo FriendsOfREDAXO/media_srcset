@@ -1,8 +1,8 @@
 <?php
+$addon = rex_addon::get('media_srcset');
+$form = rex_config_form::factory($addon->name);
 
-$form = rex_config_form::factory("marco"); //Addonname/Pluginname -> Namespace in Rex_config db
-
-$field = $form->addSelectField('output');
+$field = $form->addSelectField('srcset-output');
 $field->setLabel("Ausgabe");
 $select = $field->getSelect();
 $select->setSize(1);

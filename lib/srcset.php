@@ -183,6 +183,9 @@ class rex_media_srcset
             {
                 $source = $srcsets[0][$i]; // this will be replaced with...
                 $destination = ''; // ...an empty string if no valid srcset could be determined
+                $output = '';
+                $addon = rex_addon::get('media_srcset');
+                $output = $addon->getConfig('srcset-output');
 
                 // get the list of provided srcset items
                 if($srcsets = static::getSrcSetByMediaType($srcset))
@@ -196,7 +199,12 @@ class rex_media_srcset
                     $srcset = str_replace(['{rex_media_file}','%7Brex_media_file%7D'], $imgsrc, $srcset);
 
                     // set the replacing string
-                    $destination = 'srcset="' . $srcset . '"';
+
+                    if ($output == 'data-srcset') {
+                    $destination = 'data-srcset="' . $srcset . '"';
+                    } else {
+                        $destination = 'srcset="' . $srcset . '"';
+                    };
                 }
 
                 // finally replace the source srcset attribute with the new one

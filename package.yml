@@ -1,7 +1,7 @@
 package: media_srcset
 version: '2.0'
-author: 'FriendsOfRedaxo'
-supportpage: www.redaxo.org/de/forum/
+author: Friends Of REDAXO
+supportpage: https://github.com/FriendsOfREDAXO/media_srcset
 
 requires:
     packages:

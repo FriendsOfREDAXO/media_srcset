@@ -29,7 +29,7 @@ class rex_media_srcset
         }
 
         // get all PICTURE elements with srcset attribute
-        preg_match_all('/<picture([^>]+)?>(.*)<\/picture>/is', $content, $matches, PREG_SET_ORDER);
+        preg_match_all('/<picture([^>]+)?>(.*?)<\/picture>/is', $content, $matches, PREG_SET_ORDER);
         if(!empty($matches[0]))
         {
             $elements = array_merge($elements, $matches);

@@ -181,6 +181,12 @@ class rex_media_srcset
             // the srcset attribute was found
             foreach($srcsets[1] as $i => $srcset)
             {
+                // TODO: this should not happen in the first place, we night need to check the regexp someday
+                // prevents "Trying to access array offset on value of type null"
+                if (!isset($srcsets[0][$i])) {
+                    continue;
+                }
+                
                 $source = $srcsets[0][$i]; // this will be replaced with...
                 $destination = ''; // ...an empty string if no valid srcset could be determined
 

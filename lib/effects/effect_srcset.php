@@ -29,7 +29,6 @@ class rex_effect_srcset extends rex_effect_resize
             }
         }
         $params[] = [
-            'height' => '';
             'label' => rex_i18n::msg('media_manager_effect_param_srcset_label'),
             'name' => 'srcset',
             'type' => 'string',

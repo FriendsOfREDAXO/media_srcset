@@ -97,8 +97,8 @@ class rex_media_srcset
                             if (!empty($effect['params']['srcset']) && $effect['params']['srcset'] == $srcset) {
                                 // only reset the default width of the profile with the requested one,
                                 // if the profile's srcset parameter matches exactliy the one related to this size
-                                $effects[$i]['params']['width'] = $size;
-                                $effects[$i]['params']['height'] = '';
+                                $effects[$i]['params']['width'] = (int) $size;
+                                $effects[$i]['params']['height'] = (int) 0;
                             }
                         }
                         unset($i, $effect);
@@ -439,3 +439,4 @@ class rex_media_srcset
         return $srcset;
     }
 }
+

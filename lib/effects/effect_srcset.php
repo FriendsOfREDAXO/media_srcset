@@ -21,6 +21,7 @@ class rex_effect_srcset extends rex_effect_resize
             {
                 $p['label'] = rex_i18n::msg('media_manager_effect_param_width_label');
                 $p['notice'] = rex_i18n::msg('media_manager_effect_param_width_notice');
+                $p['default'] = 500;
             }
 
             if($p['name'] != 'height')

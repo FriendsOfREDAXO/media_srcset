@@ -443,19 +443,31 @@ class rex_media_srcset
     }
 
     /**
+     * get a srcset string
+     * @param string $fileName
+     * @param string $mediaType
+     * @return array|string|string[]
+     */
+    private static function getTagSrcSet(string $fileName, string $mediaType)
+    {
+        $srcsets = static::getSrcSetByMediaType($mediaType);
+        $srcsetsFlattened = static::flattenSrcSetArray($srcsets);
+        $srcset = implode(', ', $srcsetsFlattened);
+        return str_replace(['{rex_media_file}', '%7Brex_media_file%7D'], $fileName, $srcset);
+    }
+
+    /**
      * helper to get an HTML-Tag
      * @param string $fileName
      * @param string $mediaType
      * @param array|null $attributes
      * @param int $tagType
+     * @param array|null $additionalSources
      * @return string
      */
-    public static function getTag(string $fileName, string $mediaType, array $attributes = null, int $tagType = self::IMG): string
+    public static function getTag(string $fileName, string $mediaType, array $attributes = null, int $tagType = self::IMG, array $additionalSources = null): string
     {
-        $srcsets = static::getSrcSetByMediaType($mediaType);
-        $srcsetsFlattened = static::flattenSrcSetArray($srcsets);
-        $srcset = implode(', ', $srcsetsFlattened);
-        $srcset = str_replace(['{rex_media_file}', '%7Brex_media_file%7D'], $fileName, $srcset);
+        $srcset = self::getTagSrcSet($fileName, $mediaType);
         $media = \rex_media::get($fileName);
         $mediaPath = \rex_path::addonCache('media_manager', $mediaType . '/' . $fileName);
 
@@ -497,6 +509,15 @@ class rex_media_srcset
                 return '<img ' . $attributesString . '/>';
             case self::PICTURE:
                 $output = '<picture>';
+
+                if($additionalSources)
+                {
+                    foreach ($additionalSources as $additionalSource)
+                    {
+                        $output .= $additionalSource;
+                    }
+                }
+
                 $output .= '<source srcset="' . $srcset . '" type="' . $media->getType() . '">';
                 $output .= '<img ' . $attributesString . '/>';
                 $output .= '</picture>';
@@ -522,11 +543,24 @@ class rex_media_srcset
      * @param string $fileName
      * @param string $mediaType
      * @param array|null $attributes
+     * @param array|null $mediaQueries
      * @return string
      */
-    public static function getPictureTag(string $fileName, string $mediaType, array $attributes = null): string
+    public static function getPictureTag(string $fileName, string $mediaType, array $attributes = null, array $mediaQueries = null): string
     {
-        return self::getTag($fileName, $mediaType, $attributes, self::PICTURE);
+        $additionalSources = null;
+
+        if($mediaQueries)
+        {
+            $additionalSources = [];
+
+            foreach ($mediaQueries as $mediaQuery => $mediaQueryMediaType)
+            {
+                $additionalSources[] = '<source srcset="' . self::getTagSrcSet($fileName, $mediaQueryMediaType) . '" media="' . $mediaQuery . '">';
+            }
+        }
+
+        return self::getTag($fileName, $mediaType, $attributes, self::PICTURE, $additionalSources);
     }
 }
 

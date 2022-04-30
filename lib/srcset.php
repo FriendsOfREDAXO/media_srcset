@@ -187,7 +187,7 @@ class rex_media_srcset
                 if (!isset($srcsets[0][$i])) {
                     continue;
                 }
-                
+
                 $source = $srcsets[0][$i]; // this will be replaced with...
                 $destination = ''; // ...an empty string if no valid srcset could be determined
 
@@ -437,6 +437,55 @@ class rex_media_srcset
         unset($tmp, $query, $set);
 
         return $srcset;
+    }
+
+    /**
+     * helper to get an img-Tag
+     * @param string $fileName
+     * @param string $mediaType
+     * @param array|null $attributes
+     * @return string
+     */
+    public static function getImgTag(string $fileName, string $mediaType, array $attributes = null): string
+    {
+        $srcsets = static::getSrcSetByMediaType($mediaType);
+        $srcsetsFlattened = static::flattenSrcSetArray($srcsets);
+        $srcset = implode(', ', $srcsetsFlattened);
+        $srcset = str_replace(['{rex_media_file}','%7Brex_media_file%7D'], $fileName, $srcset);
+        $media = \rex_media::get($fileName);
+        $mediaPath = \rex_path::addonCache('media_manager', $mediaType.'/'.$fileName);
+
+        // generate managed media object/media cache if not available
+        if(!file_exists($mediaPath))
+        {
+            \rex_media_manager::create($mediaType, $fileName);
+        }
+
+        $mediaSrc = \rex_media_manager::getUrl($mediaType, $fileName);
+        $imageSize = getimagesize(\rex_path::addonCache('media_manager', $mediaType.'/'.$fileName));
+
+        if(!$attributes) {
+            $attributes = [];
+        }
+
+        $attributes['src'] = $mediaSrc;
+        $attributes['srcset'] = $srcset;
+        $attributes['width'] = $imageSize[0];
+        $attributes['height'] = $imageSize[1];
+
+        if(empty($attributes['alt'])) {
+            $attributes['alt'] = $media->getValue('title');
+        }
+
+        $attributesString = implode(' ', array_map(
+            static function ($value, $key) {
+                return $key.'="'.$value.'"';
+            },
+            $attributes,
+            array_keys($attributes)
+        ));
+
+        return '<img '.$attributesString.'/>';
     }
 }
 

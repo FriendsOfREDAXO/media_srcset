@@ -446,9 +446,9 @@ class rex_media_srcset
      * get a srcset string
      * @param string $fileName
      * @param string $mediaType
-     * @return array|string|string[]
+     * @return string
      */
-    private static function getTagSrcSet(string $fileName, string $mediaType)
+    public static function getSrcSet(string $fileName, string $mediaType): string
     {
         $srcsets = static::getSrcSetByMediaType($mediaType);
         $srcsetsFlattened = static::flattenSrcSetArray($srcsets);
@@ -467,7 +467,7 @@ class rex_media_srcset
      */
     public static function getTag(string $fileName, string $mediaType, array $attributes = null, int $tagType = self::IMG, array $additionalSources = null): string
     {
-        $srcset = self::getTagSrcSet($fileName, $mediaType);
+        $srcset = self::getSrcSet($fileName, $mediaType);
         $media = \rex_media::get($fileName);
         $mediaPath = \rex_path::addonCache('media_manager', $mediaType . '/' . $fileName);
 
@@ -556,7 +556,7 @@ class rex_media_srcset
 
             foreach ($mediaQueries as $mediaQuery => $mediaQueryMediaType)
             {
-                $additionalSources[] = '<source srcset="' . self::getTagSrcSet($fileName, $mediaQueryMediaType) . '" media="' . $mediaQuery . '">';
+                $additionalSources[] = '<source srcset="' . self::getSrcSet($fileName, $mediaQueryMediaType) . '" media="' . $mediaQuery . '">';
             }
         }
 

@@ -8,4 +8,4 @@ requires:
         media_manager: '^2.5.6'
     redaxo: '^5.4.0'
     php:
-        version: '>=5.6'
+        version: '>=7.3'

@@ -1,6 +1,6 @@
 # media_srcset
 
-Addon das einen neuen Effekt namens SRCSET hinzufügt (basierend auf dem resize-Effekt) und zusätzlich die Angabe eines SRCSET-Attributs ermöglicht.Rewrite URLs von YRewrite werden unterstützt. 
+Addon das einen neuen Effekt namens SRCSET hinzufügt (basierend auf dem resize-Effekt) und zusätzlich die Angabe eines SRCSET-Attributs ermöglicht.Rewrite URLs von YRewrite werden unterstützt.
 
 ## Installation
 
@@ -30,6 +30,12 @@ oder
 echo '<img src="'.rex_media_manager::getUrl('ImgTypeName', 'ImageFileName').'" srcset="rex_media_type=muh" />';
 ```
 
+oder
+
+```php
+echo rex_media_srcset::getImgTag('ImageFileName', 'ImgTypeName');
+```
+
 
 Genrierte Ausgabe:
 
@@ -49,6 +55,12 @@ Eingabe:
     <source srcset="rex_media_type=ImgTypeName">
     <img src="index.php?rex_media_type=ImgTypeName&rex_media_file=ImageFileName" alt="">
 </picture>
+```
+
+oder
+
+```php
+echo rex_media_srcset::getPictureTag('ImageFileName', 'ImgTypeName', ['(min-width: 56.25em)' => 'ImgTypeName']);
 ```
 
 Genrierte Ausgabe:

@@ -8,6 +8,9 @@
 
 class rex_media_srcset
 {
+    const IMG = 1;
+    const PICTURE = 2;
+
     /**
      * Replaces all occurences of srcset="rex_media_type=[profile_name]" with the set up source sets
      * @param  rex_extension_point $ep The extension point OUTPUT_FILTER
@@ -440,31 +443,43 @@ class rex_media_srcset
     }
 
     /**
-     * helper to get an img-Tag
+     * get a srcset string
      * @param string $fileName
      * @param string $mediaType
-     * @param array|null $attributes
      * @return string
      */
-    public static function getImgTag(string $fileName, string $mediaType, array $attributes = null): string
+    public static function getSrcSet(string $fileName, string $mediaType): string
     {
         $srcsets = static::getSrcSetByMediaType($mediaType);
         $srcsetsFlattened = static::flattenSrcSetArray($srcsets);
         $srcset = implode(', ', $srcsetsFlattened);
-        $srcset = str_replace(['{rex_media_file}','%7Brex_media_file%7D'], $fileName, $srcset);
+        return str_replace(['{rex_media_file}', '%7Brex_media_file%7D'], $fileName, $srcset);
+    }
+
+    /**
+     * helper to get an HTML-Tag
+     * @param string $fileName
+     * @param string $mediaType
+     * @param array|null $attributes
+     * @param int $tagType
+     * @param array|null $additionalSources
+     * @return string
+     */
+    public static function getTag(string $fileName, string $mediaType, array $attributes = null, int $tagType = self::IMG, array $additionalSources = null): string
+    {
+        $srcset = self::getSrcSet($fileName, $mediaType);
         $media = \rex_media::get($fileName);
-        $mediaPath = \rex_path::addonCache('media_manager', $mediaType.'/'.$fileName);
+        $mediaPath = \rex_path::addonCache('media_manager', $mediaType . '/' . $fileName);
 
         // generate managed media object/media cache if not available
-        if(!file_exists($mediaPath))
-        {
+        if (!file_exists($mediaPath)) {
             \rex_media_manager::create($mediaType, $fileName);
         }
 
         $mediaSrc = \rex_media_manager::getUrl($mediaType, $fileName);
-        $imageSize = getimagesize(\rex_path::addonCache('media_manager', $mediaType.'/'.$fileName));
+        $imageSize = getimagesize(\rex_path::addonCache('media_manager', $mediaType . '/' . $fileName));
 
-        if(!$attributes) {
+        if (!$attributes) {
             $attributes = [];
         }
 
@@ -473,19 +488,79 @@ class rex_media_srcset
         $attributes['width'] = $imageSize[0];
         $attributes['height'] = $imageSize[1];
 
-        if(empty($attributes['alt'])) {
+        if (empty($attributes['alt'])) {
             $attributes['alt'] = $media->getValue('title');
+        }
+
+        if ($tagType === self::PICTURE) {
+            unset($attributes['srcset']);
         }
 
         $attributesString = implode(' ', array_map(
             static function ($value, $key) {
-                return $key.'="'.$value.'"';
+                return $key . '="' . $value . '"';
             },
             $attributes,
             array_keys($attributes)
         ));
 
-        return '<img '.$attributesString.'/>';
+        switch ($tagType) {
+            case self::IMG:
+                return '<img ' . $attributesString . '/>';
+            case self::PICTURE:
+                $output = '<picture>';
+
+                if($additionalSources)
+                {
+                    foreach ($additionalSources as $additionalSource)
+                    {
+                        $output .= $additionalSource;
+                    }
+                }
+
+                $output .= '<source srcset="' . $srcset . '" type="' . $media->getType() . '">';
+                $output .= '<img ' . $attributesString . '/>';
+                $output .= '</picture>';
+
+                return $output;
+        }
+    }
+
+    /**
+     * helper to get an img-Tag
+     * @param string $fileName
+     * @param string $mediaType
+     * @param array|null $attributes
+     * @return string
+     */
+    public static function getImgTag(string $fileName, string $mediaType, array $attributes = null): string
+    {
+        return self::getTag($fileName, $mediaType, $attributes);
+    }
+
+    /**
+     * helper to get an picture-Tag
+     * @param string $fileName
+     * @param string $mediaType
+     * @param array|null $attributes
+     * @param array|null $mediaQueries
+     * @return string
+     */
+    public static function getPictureTag(string $fileName, string $mediaType, array $attributes = null, array $mediaQueries = null): string
+    {
+        $additionalSources = null;
+
+        if($mediaQueries)
+        {
+            $additionalSources = [];
+
+            foreach ($mediaQueries as $mediaQuery => $mediaQueryMediaType)
+            {
+                $additionalSources[] = '<source srcset="' . self::getSrcSet($fileName, $mediaQueryMediaType) . '" media="' . $mediaQuery . '">';
+            }
+        }
+
+        return self::getTag($fileName, $mediaType, $attributes, self::PICTURE, $additionalSources);
     }
 }
 

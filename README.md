@@ -17,7 +17,9 @@ z.B. `400 480w, 800 480w 2x, 700 768w`
 
 Die einzelnen SRCSET-Attribute lassen sich dann innerhalb des Templates über den Profilnamen einfügen:
 
-Eingabe:
+### Image-Tag
+
+#### Eingabe:
 
 ```html
 <img src="index.php?rex_media_type=ImgTypeName&rex_media_file=ImageFileName"
@@ -37,7 +39,7 @@ echo rex_media_srcset::getImgTag('ImageFileName', 'ImgTypeName');
 ```
 
 
-Genrierte Ausgabe:
+#### Generierte Ausgabe:
 
 ```html
 <img src="index.php?rex_media_type=ImgTypeName&rex_media_file=ImageFileName"
@@ -47,7 +49,9 @@ Genrierte Ausgabe:
     ">
 ```
 
-Eingabe:
+### Picture-Tag
+
+#### Eingabe:
 
 ```html
 <picture>
@@ -63,7 +67,7 @@ oder
 echo rex_media_srcset::getPictureTag('ImageFileName', 'ImgTypeName', ['(min-width: 56.25em)' => 'ImgTypeName']);
 ```
 
-Genrierte Ausgabe:
+#### Generierte Ausgabe:
 
 ```html
 <picture>
@@ -96,7 +100,7 @@ height: auto;
 
 erhalten muss.
 
-Eingabe:
+### Eingabe:
 
 ```html
 <script type="text/javascript" src="assets/addons/media_srcset/srcset.js"></script>
@@ -105,7 +109,7 @@ Eingabe:
     data-srcset="rex_media_type=ImgTypeName">
 ```
 
-Ausgabe:
+### Ausgabe:
 
 ```html
 <img src="index.php?rex_media_type=ImgTypeName__700&rex_media_file=ImageFileName"

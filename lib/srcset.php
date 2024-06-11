@@ -466,66 +466,79 @@ class rex_media_srcset
      * @return string
      */
     public static function getTag(string $fileName, string $mediaType, array $attributes = null, int $tagType = self::IMG, array $additionalSources = null): string
-    {
-        $srcset = self::getSrcSet($fileName, $mediaType);
-        $media = \rex_media::get($fileName);
-        $mediaPath = \rex_path::addonCache('media_manager', $mediaType . '/' . $fileName);
+{
+    $srcset = self::getSrcSet($fileName, $mediaType);
+    $media = \rex_media::get($fileName);
+    $mediaPath = \rex_path::addonCache('media_manager', $mediaType . '/' . $fileName);
 
-        // generate managed media object/media cache if not available
-        if (!file_exists($mediaPath)) {
-            \rex_media_manager::create($mediaType, $fileName);
-        }
+    // generate managed media object/media cache if not available
+    if (!file_exists($mediaPath)) {
+        \rex_media_manager::create($mediaType, $fileName);
+    }
 
-        $mediaSrc = \rex_media_manager::getUrl($mediaType, $fileName);
-        $imageSize = getimagesize(\rex_path::addonCache('media_manager', $mediaType . '/' . $fileName));
+    $mediaSrc = \rex_media_manager::getUrl($mediaType, $fileName);
+    $imageSize = getimagesize(\rex_path::addonCache('media_manager', $mediaType . '/' . $fileName));
 
-        if (!$attributes) {
-            $attributes = [];
-        }
+    if (!$attributes) {
+        $attributes = [];
+    }
 
-        $attributes['src'] = $mediaSrc;
-        $attributes['srcset'] = $srcset;
-        $attributes['width'] = $imageSize[0];
-        $attributes['height'] = $imageSize[1];
+    $attributes['src'] = $mediaSrc;
+    $attributes['srcset'] = $srcset;
+    $attributes['width'] = $imageSize[0];
+    $attributes['height'] = $imageSize[1];
 
-        if (empty($attributes['alt'])) {
-            $attributes['alt'] = $media->getValue('title');
-        }
+    if (empty($attributes['alt'])) {
+        $attributes['alt'] = $media->getValue('title');
+    }
 
-        if ($tagType === self::PICTURE) {
-            unset($attributes['srcset']);
-        }
-
-        $attributesString = implode(' ', array_map(
-            static function ($value, $key) {
-                return $key . '="' . $value . '"';
-            },
-            $attributes,
-            array_keys($attributes)
-        ));
-
-        switch ($tagType) {
-            case self::IMG:
-                return '<img ' . $attributesString . '/>';
-            case self::PICTURE:
-                $output = '<picture>';
-
-                if($additionalSources)
-                {
-                    foreach ($additionalSources as $additionalSource)
-                    {
-                        $output .= $additionalSource;
-                    }
-                }
-
-                $output .= '<source srcset="' . $srcset . '" type="' . $media->getType() . '">';
-                $output .= '<img ' . $attributesString . '/>';
-                $output .= '</picture>';
-
-                return $output;
+    // Extract sizes from srcset
+    $sizes = [];
+    preg_match_all('/(\d+)w/', $srcset, $matches);
+    if (!empty($matches[1])) {
+        foreach ($matches[1] as $size) {
+            $sizes[] = "(max-width: {$size}px) {$size}px";
         }
     }
 
+    // Add sizes attribute if not already set
+    if (!isset($attributes['sizes'])) {
+        $attributes['sizes'] = $attributes['width'] . 'px';
+    }
+
+    if ($tagType === self::PICTURE) {
+        unset($attributes['srcset']);
+    }
+
+    $attributesString = implode(' ', array_map(
+        static function ($value, $key) {
+            return $key . '="' . $value . '"';
+        },
+        $attributes,
+        array_keys($attributes)
+    ));
+
+    switch ($tagType) {
+        case self::IMG:
+            return '<img ' . $attributesString . '/>';
+        case self::PICTURE:
+            $output = '<picture>';
+
+            if($additionalSources)
+            {
+                foreach ($additionalSources as $additionalSource)
+                {
+                    $output .= $additionalSource;
+                }
+            }
+
+            $output .= '<source srcset="' . $srcset . '" type="' . $media->getType() . '">';
+            $output .= '<img ' . $attributesString . '/>';
+            $output .= '</picture>';
+
+            return $output;
+    }
+}
     /**
      * helper to get an img-Tag
      * @param string $fileName

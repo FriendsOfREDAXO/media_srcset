@@ -29,20 +29,20 @@ Die einzelnen SRCSET-Attribute lassen sich dann innerhalb des Templates über de
 oder
 
 ```php
-echo '<img src="'.rex_media_manager::getUrl('ImgTypeName', 'ImageFileName').'" srcset="rex_media_type=muh" />';
+echo '<img src="'.rex_media_manager::getUrl('ImgTypeName', 'ImageFileName').'" srcset="rex_media_type=muh" class="classNamce" />';
 ```
 
 oder
 
 ```php
-echo rex_media_srcset::getImgTag('ImageFileName', 'ImgTypeName');
+echo rex_media_srcset::getImgTag('ImageFileName', 'ImgTypeName', ['class' => 'className'] );
 ```
 
 
 #### Generierte Ausgabe:
 
 ```html
-<img src="index.php?rex_media_type=ImgTypeName&rex_media_file=ImageFileName"
+<img class="className" src="index.php?rex_media_type=ImgTypeName&rex_media_file=ImageFileName"
     srcset="index.php?rex_media_type=ImgTypeName__400&rex_media_file=ImageFileName 480w
             index.php?rex_media_type=ImgTypeName__700&rex_media_file=ImageFileName 768w
             index.php?rex_media_type=ImgTypeName__800&rex_media_file=ImageFileName 960w

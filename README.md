@@ -12,13 +12,14 @@ Addon das einen neuen Effekt namens SRCSET hinzufügt (basierend auf dem resize-
 
 ### Erklärung der `srcset`-Attribute für optimale Bilddarstellung
 
-Wenn du Bilder auf deiner Website einfügst und sicherstellen möchtest, dass sie sowohl auf Desktop- als auch auf Mobilgeräten optimal angezeigt werden, kannst du die `srcset`- und `sizes`-Attribute in HTML verwenden. 
+Wenn du Bilder auf deiner Website einfügst und sicherstellen möchtest, dass sie sowohl auf Desktop- als auch auf Mobilgeräten optimal angezeigt werden, ohne tausende neue MediaManager-Typen anzulegen, kannst du mit diesem Addon automatisiert die `srcset`- und `sizes`-Attribute in HTML verwenden. 
 
 #### Beispiel für einen `srcset`-Eingabe-String im Addon:
 
 ```
 470 470w, 940 470w 2x, 1410 470w 3x
 ```
+Dieser String wird im MM-Typ angegeben. 
 
 ### Was bedeutet dieser `srcset`-String?
 
@@ -60,9 +61,7 @@ Das `sizes`-Attribut gibt an, wie groß das Bild in verschiedenen Layouts angeze
 - **`(max-width: 600px) 100vw`**: Wenn der Bildschirm maximal 600px breit ist (z.B. auf Mobilgeräten), wird das Bild die volle Breite des Bildschirms einnehmen (100vw).
 - **`470px`**: Für größere Bildschirme wird das Bild auf 470px Breite angezeigt.
 
-### Zusammenfassung
-
-Mit den richtigen `srcset`- und `sizes`-Attributen stellst du sicher, dass deine Bilder auf allen Geräten und Auflösungen scharf und gut sichtbar sind. Der `srcset`-String gibt dem Browser verschiedene Bildgrößen zur Auswahl, abhängig von der Bildschirmauflösung und Größe. Das `sizes`-Attribut hilft dem Browser zu entscheiden, welche Bildgröße am besten für die aktuelle Anzeige geeignet ist.
+Mit den richtigen `srcset`- und `sizes`-Attributen sorgt das Addon automatisch dafür, dass deine Bilder auf allen Geräten und Auflösungen scharf ausgespielt wird. Der `srcset`-String gibt dem Browser verschiedene Bildgrößen zur Auswahl, abhängig von der Bildschirmauflösung und Größe. Das `sizes`-Attribut hilft dem Browser zu entscheiden, welche Bildgröße am besten für die aktuelle Anzeige geeignet ist, basierend auf festen Pixelwerten.
 
 ## Verwendung
 

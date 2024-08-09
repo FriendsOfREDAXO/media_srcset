@@ -8,6 +8,62 @@ Addon das einen neuen Effekt namens SRCSET hinzufügt (basierend auf dem resize-
 * Ordner umbenennen in `media_srcset`.
 * In den AddOns-Ordner legen: `/redaxo/src/addons`.
 
+## Hintergrund und Funktionsweise
+
+### Erklärung der `srcset`-Attribute für optimale Bilddarstellung
+
+Wenn du Bilder auf deiner Website einfügst und sicherstellen möchtest, dass sie sowohl auf Desktop- als auch auf Mobilgeräten optimal angezeigt werden, kannst du die `srcset`- und `sizes`-Attribute in HTML verwenden. 
+
+#### Beispiel für einen `srcset`-Eingabe-String im Addon:
+
+```
+470 470w, 940 470w 2x, 1410 470w 3x
+```
+
+### Was bedeutet dieser `srcset`-String?
+
+1. **470 470w**
+   - **470**: Die Breite des Bildes in Pixeln (470px).
+   - **470w**: Diese Größe ist für Bildschirme mit normaler (1x) Auflösung gedacht. Das Bild wird in 470px Breite angezeigt.
+
+2. **940 470w 2x**
+   - **940**: Die Breite des Bildes in Pixeln (940px), das für Bildschirme mit doppelter (2x) Auflösung gedacht ist.
+   - **470w**: Das Bild wird im Layout 470px breit angezeigt, aber für hochauflösende (Retina) Displays verwendet.
+
+3. **1410 470w 3x**
+   - **1410**: Die Breite des Bildes in Pixeln (1410px), das für Bildschirme mit dreifacher (3x) Auflösung gedacht ist.
+   - **470w**: Das Bild wird im Layout 470px breit angezeigt, aber für hochauflösende Displays verwendet.
+
+### Welche Auswirkungen hat das?
+
+1. **Desktop-Bildschirme:**
+   - **Normale Displays (1x)**: Das Bild wird in seiner Basisgröße von 470px angezeigt.
+   - **Retina Displays (2x)**: Der Browser verwendet das Bild mit 940px Breite, aber zeigt es auf dem Bildschirm in 470px Breite an. Dies sorgt für eine schärfere Darstellung auf hochauflösenden Displays.
+   - **Displays mit 3x-Auflösung**: Der Browser verwendet das Bild mit 1410px Breite, aber zeigt es auf dem Bildschirm in 470px Breite an, um maximale Klarheit auf sehr hochauflösenden Displays zu gewährleisten.
+
+2. **Mobile Geräte:**
+   - Die gleiche Logik wie auf Desktops wird angewendet. Der Browser wählt das am besten passende Bild basierend auf der Bildschirmauflösung aus, um sicherzustellen, dass das Bild klar und scharf aussieht, egal wie groß oder klein der Bildschirm ist.
+
+### Einfluss auf das `sizes`-Attribut
+
+Das `sizes`-Attribut gibt an, wie groß das Bild in verschiedenen Layouts angezeigt wird. Hier ein einfaches Beispiel:
+
+```html
+<img src="/path/to/default.jpg" 
+     srcset="/path/to/image-470.jpg 470w, 
+             /path/to/image-940.jpg 940w 2x, 
+             /path/to/image-1410.jpg 1410w 3x" 
+     sizes="(max-width: 600px) 100vw, 470px" 
+     alt="Beispielbild">
+```
+
+- **`(max-width: 600px) 100vw`**: Wenn der Bildschirm maximal 600px breit ist (z.B. auf Mobilgeräten), wird das Bild die volle Breite des Bildschirms einnehmen (100vw).
+- **`470px`**: Für größere Bildschirme wird das Bild auf 470px Breite angezeigt.
+
+### Zusammenfassung
+
+Mit den richtigen `srcset`- und `sizes`-Attributen stellst du sicher, dass deine Bilder auf allen Geräten und Auflösungen scharf und gut sichtbar sind. Der `srcset`-String gibt dem Browser verschiedene Bildgrößen zur Auswahl, abhängig von der Bildschirmauflösung und Größe. Das `sizes`-Attribut hilft dem Browser zu entscheiden, welche Bildgröße am besten für die aktuelle Anzeige geeignet ist.
+
 ## Verwendung
 
 Im Feld SRCSET-Attribut die entsprechenden SRCSET-Angaben einfügen, allerdings statt eines Dateinamens die

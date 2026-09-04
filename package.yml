@@ -1,11 +1,11 @@
 package: media_srcset
-version: '2.2.0'
+version: '2.2.1'
 author: Friends Of REDAXO
 supportpage: https://github.com/FriendsOfREDAXO/media_srcset
 
 requires:
     packages:
         media_manager: '^2.5.6'
-    redaxo: '^5.4.0'
+    redaxo: '^5.10.0'
     php:
         version: '>=7.3'

@@ -11,6 +11,9 @@ class rex_effect_srcset extends rex_effect_resize
         return rex_i18n::msg('media_manager_effect_srcset');
     }
 
+    /**
+     * @return list<array{label: string, name: string, type: 'int'|'float'|'string'|'select'|'media', default?: mixed, notice?: string, prefix?: string, suffix?: string, attributes?: array<string, string>, options?: array<int, string>}>
+     */
     public function getParams()
     {
         $params = [];

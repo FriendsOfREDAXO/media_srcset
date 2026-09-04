@@ -13,7 +13,7 @@ class rex_media_srcset
 
     /**
      * Replaces all occurences of srcset="rex_media_type=[profile_name]" with the set up source sets
-     * @param  rex_extension_point $ep The extension point OUTPUT_FILTER
+     * @param  rex_extension_point<string> $ep The extension point OUTPUT_FILTER
      * @return String                  The content with the replaced srcset attributes
      */
     public static function replaceSrcSets(rex_extension_point $ep)
@@ -66,8 +66,8 @@ class rex_media_srcset
     /**
      * Tries to find a valid srcset media manager profile from a profilename like PROFILENAME__[imagesize]
      * and overwrites the default size of that profile with the requested imagesize
-     * @param rex_extension_point $ep The extension point MEDIA_MANAGER_FILTERSET
-     * @return Array                  A valid effects array for processing
+     * @param rex_extension_point<list<array{effect: string, params: array<string, mixed>}>> $ep The extension point MEDIA_MANAGER_FILTERSET
+     * @return list<array{effect: string, params: array<string, mixed>}> A valid effects array for processing
      */
     public static function managerFilterset(rex_extension_point $ep)
     {
@@ -139,9 +139,8 @@ class rex_media_srcset
 
             // first try to get the filename from a rex_media_file parameter within the URI - that is, if no rewrite plugin is set up for example
             $regex = '/rex_media_file=([^\&]+)/i';
-            if(preg_match($regex, $match[2]))
+            if(preg_match($regex, $match[2], $_match))
             {
-                preg_match($regex, $match[2], $_match);
                 $image = $_match[1];
             }
             else
@@ -206,7 +205,7 @@ class rex_media_srcset
                     $srcset = str_replace(['{rex_media_file}','%7Brex_media_file%7D'], $imgsrc, $srcset);
 
                     // set the replacing string
-                    $destination = 'srcset="' . $srcset . '"';
+                    $destination = 'srcset="' . rex_escape($srcset) . '"';
                 }
 
                 // finally replace the source srcset attribute with the new one
@@ -222,9 +221,9 @@ class rex_media_srcset
      * this will return the next largest size.
      * @param  mixed $size     The requested size
      * @param  string $type    The set requested profile name
-     * @return [type]          [description]
+     * @return int             The valid size
      */
-    protected static function provideValidSize($size, $type)
+    protected static function provideValidSize($size, $type): int
     {
         $size = (int) $size;
 
@@ -256,32 +255,21 @@ class rex_media_srcset
      * Get's the effects parameters of a given profile name. Uses
      * rex_managed_media and rex_media_manager.
      * @param  String $type The name of the profile
-     * @return array        The effects array.
+     * @return list<array{effect: string, params: array<string, mixed>}> The effects array.
      */
     protected static function getEffectsFromType($type)
     {
-        $effects = [];
+        // create a fake mediaobject and media manager to read the profile's effects
+        $media = new rex_managed_media('');
+        $manager = new rex_media_manager($media);
 
-        // create fake mediaobject
-        if($media = new rex_managed_media(''))
-        {
-            // create a fake media manager
-            if($manager = new rex_media_manager($media))
-            {
-                // get the effects
-                $effects = $manager->effectsFromType($type);
-            }
-        }
-
-        unset($media, $manager);
-
-        return $effects;
+        return $manager->effectsFromType($type);
     }
 
     /**
      * Creates an image width and and viewport width parameter from a given string
      * @param  string $string The string containing the data
-     * @return array          The data: ['image_width' => (int), 'viewport_width' => (int)];
+     * @return array{image_width: int, viewport_width: int}|null The data, or null if it could not be parsed
      */
     public static function getSingleSet($string)
     {
@@ -289,58 +277,55 @@ class rex_media_srcset
 
         $segments = explode(' ', trim($string));
 
-        if(!empty($segments))
+        $image_width = 0;
+        $viewport_width = 0;
+        $viewport_ratio = 1;
+        while($seg = array_pop($segments))
         {
-            $image_width = 0;
-            $viewport_width = 0;
-            $viewport_ratio = 1;
-            while($seg = array_pop($segments))
+            if(preg_match('/[0-9]+x$/', $seg))
             {
-                if(preg_match('/[0-9]+x$/', $seg))
-                {
-                    // looks like a Nx parameter setting the viewport ratio (e.g. 2x for a retina display)
-                    $viewport_ratio = (float) preg_replace('/[^0-9]/', '', $seg);
-                }
-                elseif(preg_match('/[0-9]+w$/', $seg))
-                {
-                    // looks like a viewport parameter, e.g. '800w'
-                    $viewport_width = (int) preg_replace('/[^0-9]/', '', $seg);
-                }
-                elseif(!preg_match('/[^0-9]/', $seg))
-                {
-                    // only a number so this is probably the requested image width
-                    $image_width = (int) preg_replace('/[^0-9]/', '', $seg);
-                }
+                // looks like a Nx parameter setting the viewport ratio (e.g. 2x for a retina display)
+                $viewport_ratio = (float) preg_replace('/[^0-9]/', '', $seg);
             }
-            unset($seg);
-
-            if(empty($image_width) && !empty($viewport_width))
+            elseif(preg_match('/[0-9]+w$/', $seg))
             {
-                // if no image width is given but a viewport width, the image width is the same as the viewport's width
-                $image_width = $viewport_width;
+                // looks like a viewport parameter, e.g. '800w'
+                $viewport_width = (int) preg_replace('/[^0-9]/', '', $seg);
             }
-            elseif(empty($viewport_width) && !empty($image_width))
+            elseif(!preg_match('/[^0-9]/', $seg))
             {
-                // if no viewport width is given but a image width, the viewport width is the same as the image's width
-                $viewport_width = $image_width;
+                // only a number so this is probably the requested image width
+                $image_width = (int) preg_replace('/[^0-9]/', '', $seg);
             }
-
-            if($image_width>0 && $viewport_width>0)
-            {
-                // both, image width and viewport width are set up
-
-                // let's multiply the viewport_width by the viewport_ratio
-                $viewport_width = round($viewport_ratio * $viewport_width);
-
-                // set up the return array
-                $set = [
-                    'image_width' => $image_width,
-                    'viewport_width' => $viewport_width
-                ];
-            }
-
-            unset($image_width, $viewport_width, $viewport_ratio);
         }
+        unset($seg);
+
+        if(empty($image_width) && !empty($viewport_width))
+        {
+            // if no image width is given but a viewport width, the image width is the same as the viewport's width
+            $image_width = $viewport_width;
+        }
+        elseif(empty($viewport_width) && !empty($image_width))
+        {
+            // if no viewport width is given but a image width, the viewport width is the same as the image's width
+            $viewport_width = $image_width;
+        }
+
+        if($image_width>0 && $viewport_width>0)
+        {
+            // both, image width and viewport width are set up
+
+            // let's multiply the viewport_width by the viewport_ratio
+            $viewport_width = (int) round($viewport_ratio * $viewport_width);
+
+            // set up the return array
+            $set = [
+                'image_width' => $image_width,
+                'viewport_width' => $viewport_width
+            ];
+        }
+
+        unset($image_width, $viewport_width, $viewport_ratio);
 
         return $set;
     }
@@ -362,7 +347,10 @@ class rex_media_srcset
         }
         else
         {
-            $url = rex_media_manager::getUrl($type, $filename);
+            // request the raw, unescaped URL - callers are responsible for HTML-escaping
+            // it at their own point of output (rex_media_manager::getUrl() otherwise
+            // returns it pre-escaped with "&amp;", which would be double-escaped downstream)
+            $url = rex_media_manager::getUrl($type, $filename, null, false);
         }
 
         return $url;
@@ -373,7 +361,7 @@ class rex_media_srcset
      * returns an array containing all the single srcsets (if a user sets up multiple srcsets within
      * a profile) which itself contain the single sizes and their file URLs.
      * @param  string $type Profile name
-     * @return array        The srcsets
+     * @return array<string, array<int, string>> The srcsets
      */
     protected static function getSrcSetByMediaType($type)
     {
@@ -425,8 +413,8 @@ class rex_media_srcset
 
     /**
      * Flattens a srcset array so we have only a list of sizes and their file URLS
-     * @param  array  $srcset The array of srcsets (as provided by getSrcSetByMediaType())
-     * @return array          The single sizes and their file URLs
+     * @param  array<string, array<int, string>> $srcset The array of srcsets (as provided by getSrcSetByMediaType())
+     * @return array<int, string> The single sizes and their file URLs
      */
     protected static function flattenSrcSetArray(array $srcset)
     {
@@ -443,6 +431,18 @@ class rex_media_srcset
     }
 
     /**
+     * Checks whether the given filename is a SVG.
+     * SVGs scale natively in the browser, so media manager processing
+     * (resizing, cropping, srcset resolution variants) neither applies nor benefits them.
+     * @param  string $fileName
+     * @return bool
+     */
+    protected static function isSvg(string $fileName): bool
+    {
+        return 'svg' === strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+    }
+
+    /**
      * get a srcset string
      * @param string $fileName
      * @param string $mediaType
@@ -450,6 +450,10 @@ class rex_media_srcset
      */
     public static function getSrcSet(string $fileName, string $mediaType): string
     {
+        if (self::isSvg($fileName)) {
+            return '';
+        }
+
         $srcsets = static::getSrcSetByMediaType($mediaType);
         $srcsetsFlattened = static::flattenSrcSetArray($srcsets);
         $srcset = implode(', ', $srcsetsFlattened);
@@ -457,110 +461,201 @@ class rex_media_srcset
     }
 
     /**
+     * Estimates a "sizes" attribute from the layout context (container width class,
+     * column counts) instead of merely restating the srcset breakpoints - same
+     * approach as the builder addon's ResponsiveImage::buildSizes().
+     * @param array{containerWidth?: string, columns?: int, columnsTablet?: int, columnsMobile?: int, mediaFraction?: float} $layout
+     * @return string
+     */
+    protected static function calculateLayoutSizes(array $layout): string
+    {
+        $containerWidth = (string) ($layout['containerWidth'] ?? 'uk-container');
+        $columns = max(1, (int) ($layout['columns'] ?? 3));
+        $columnsTablet = max(1, (int) ($layout['columnsTablet'] ?? 2));
+        $columnsMobile = max(1, (int) ($layout['columnsMobile'] ?? 1));
+        $mediaFraction = max(0.05, min(1.0, (float) ($layout['mediaFraction'] ?? 1.0)));
+
+        $containerMaxPx = self::estimateContainerMaxPx($containerWidth);
+
+        $desktopPx = (int) max(220, round(($containerMaxPx / $columns) * $mediaFraction));
+        $tabletVw = (int) max(20, min(100, floor((100 / $columnsTablet) * $mediaFraction)));
+        $mobileVw = (int) max(30, min(100, floor((100 / $columnsMobile) * $mediaFraction)));
+
+        return sprintf(
+            '(min-width: 1200px) %dpx, (min-width: 640px) %dvw, %dvw',
+            $desktopPx,
+            $tabletVw,
+            $mobileVw
+        );
+    }
+
+    /**
+     * Rough container-max-width estimate from a UIkit-style container width keyword
+     * (e.g. "uk-container", "uk-container-xsmall", "uk-container-expand").
+     * @param  string $container
+     * @return int
+     */
+    protected static function estimateContainerMaxPx(string $container): int
+    {
+        if (str_contains($container, 'xsmall')) {
+            return 640;
+        }
+        if (str_contains($container, 'small')) {
+            return 900;
+        }
+        if (str_contains($container, 'xlarge')) {
+            return 1600;
+        }
+        if (str_contains($container, 'large')) {
+            return 1400;
+        }
+        if (str_contains($container, 'expand') || '' === $container) {
+            return 1920;
+        }
+
+        return 1200;
+    }
+
+    /**
      * helper to get an HTML-Tag
      * @param string $fileName
      * @param string $mediaType
-     * @param array|null $attributes
+     * @param array<string, string|int>|null $attributes
      * @param int $tagType
-     * @param array|null $additionalSources
+     * @param list<string>|null $additionalSources
+     * @param array{containerWidth?: string, columns?: int, columnsTablet?: int, columnsMobile?: int, mediaFraction?: float}|null $layout
      * @return string
      */
-    public static function getTag(string $fileName, string $mediaType, array $attributes = null, int $tagType = self::IMG, array $additionalSources = null): string
-{
-    $srcset = self::getSrcSet($fileName, $mediaType);
-    $media = \rex_media::get($fileName);
-    $mediaPath = \rex_path::addonCache('media_manager', $mediaType . '/' . $fileName);
-
-    // generate managed media object/media cache if not available
-    if (!file_exists($mediaPath)) {
-        \rex_media_manager::create($mediaType, $fileName);
-    }
-
-    $mediaSrc = \rex_media_manager::getUrl($mediaType, $fileName);
-    $imageSize = getimagesize(\rex_path::addonCache('media_manager', $mediaType . '/' . $fileName));
-
-    if (!$attributes) {
-        $attributes = [];
-    }
-
-    $attributes['src'] = $mediaSrc;
-    $attributes['srcset'] = $srcset;
-    $attributes['width'] = $imageSize[0];
-    $attributes['height'] = $imageSize[1];
-
-    if (empty($attributes['alt'])) {
-        $attributes['alt'] = $media->getValue('title');
-    }
-
-    // Extract sizes from srcset
-    $sizes = [];
-    preg_match_all('/(\d+)w/', $srcset, $matches);
-    if (!empty($matches[1])) {
-        foreach ($matches[1] as $size) {
-            $sizes[] = "(max-width: {$size}px) {$size}px";
+    public static function getTag(string $fileName, string $mediaType, ?array $attributes = null, int $tagType = self::IMG, ?array $additionalSources = null, ?array $layout = null): string
+    {
+        $media = \rex_media::get($fileName);
+        if (!$media) {
+            throw new \InvalidArgumentException(sprintf('Media file "%s" not found.', $fileName));
         }
-    }
 
-    // Add sizes attribute if not already set
-    if (!isset($attributes['sizes'])) {
-        // Set sizes attribute dynamically based on the extracted sizes
-        $attributes['sizes'] = implode(', ', $sizes) . ', ' . $attributes['width'] . 'px';
-    }
+        $isSvg = self::isSvg($fileName);
 
-    if ($tagType === self::PICTURE) {
-        unset($attributes['srcset']);
-    }
+        if ($isSvg) {
+            // SVGs scale natively in the browser - serve the pool file directly instead of
+            // routing through the media manager, which has nothing meaningful to do for them
+            $srcset = '';
+            $mediaSrc = \rex_url::media($fileName);
+            $imageSize = false;
+        } else {
+            $srcset = self::getSrcSet($fileName, $mediaType);
+            $mediaPath = \rex_path::addonCache('media_manager', $mediaType . '/' . $fileName);
 
-    $attributesString = implode(' ', array_map(
-        static function ($value, $key) {
-            return $key . '="' . $value . '"';
-        },
-        $attributes,
-        array_keys($attributes)
-    ));
-
-    switch ($tagType) {
-        case self::IMG:
-            return '<img ' . $attributesString . '/>';
-        case self::PICTURE:
-            $output = '<picture>';
-
-            if($additionalSources)
-            {
-                foreach ($additionalSources as $additionalSource)
-                {
-                    $output .= $additionalSource;
-                }
+            // generate managed media object/media cache if not available
+            if (!file_exists($mediaPath)) {
+                \rex_media_manager::create($mediaType, $fileName);
             }
 
-            $output .= '<source srcset="' . $srcset . '" type="' . $media->getType() . '">';
-            $output .= '<img ' . $attributesString . '/>';
-            $output .= '</picture>';
+            // raw, unescaped URL - rex_escape() is applied uniformly when the attribute string is built below
+            $mediaSrc = \rex_media_manager::getUrl($mediaType, $fileName, null, false);
+            $imageSize = getimagesize($mediaPath);
+        }
 
-            return $output;
+        if (!$attributes) {
+            $attributes = [];
+        }
+
+        $attributes['src'] = $mediaSrc;
+        if ('' !== $srcset) {
+            $attributes['srcset'] = $srcset;
+        }
+        if ($imageSize !== false) {
+            $attributes['width'] = $imageSize[0];
+            $attributes['height'] = $imageSize[1];
+        }
+
+        if (empty($attributes['alt'])) {
+            $attributes['alt'] = $media->getValue('title');
+        }
+
+        // Add a sizes attribute describing the srcset breakpoints, if there is a srcset to describe
+        if ('' !== $srcset && !isset($attributes['sizes'])) {
+            if (null !== $layout) {
+                // layout-derived sizes (container width + column counts), matching builder's approach
+                $attributes['sizes'] = self::calculateLayoutSizes($layout);
+            } else {
+                $sizes = [];
+                preg_match_all('/(\d+)w/', $srcset, $matches);
+                foreach ($matches[1] as $size) {
+                    $sizes[] = "(max-width: {$size}px) {$size}px";
+                }
+
+                $sizesString = implode(', ', $sizes);
+                if (isset($attributes['width'])) {
+                    $sizesString .= ('' !== $sizesString ? ', ' : '') . $attributes['width'] . 'px';
+                }
+                $attributes['sizes'] = $sizesString;
+            }
+        }
+
+        if ($tagType === self::PICTURE) {
+            unset($attributes['srcset']);
+        }
+
+        $attributes = array_filter($attributes, static function ($key) {
+            return (bool) preg_match('/^[a-zA-Z_:][-a-zA-Z0-9_:.]*$/', $key);
+        }, ARRAY_FILTER_USE_KEY);
+
+        $attributesString = implode(' ', array_map(
+            static function ($value, $key) {
+                return $key . '="' . rex_escape($value) . '"';
+            },
+            $attributes,
+            array_keys($attributes)
+        ));
+
+        switch ($tagType) {
+            case self::IMG:
+                return '<img ' . $attributesString . '/>';
+            case self::PICTURE:
+                $output = '<picture>';
+
+                if($additionalSources)
+                {
+                    foreach ($additionalSources as $additionalSource)
+                    {
+                        $output .= $additionalSource;
+                    }
+                }
+
+                if ('' !== $srcset) {
+                    $output .= '<source srcset="' . rex_escape($srcset) . '" type="' . rex_escape($media->getType()) . '">';
+                }
+                $output .= '<img ' . $attributesString . '/>';
+                $output .= '</picture>';
+
+                return $output;
+            default:
+                throw new \InvalidArgumentException(sprintf('Invalid tag type "%d" given.', $tagType));
+        }
     }
-}
     /**
      * helper to get an img-Tag
      * @param string $fileName
      * @param string $mediaType
-     * @param array|null $attributes
+     * @param array<string, string|int>|null $attributes
+     * @param array{containerWidth?: string, columns?: int, columnsTablet?: int, columnsMobile?: int, mediaFraction?: float}|null $layout
      * @return string
      */
-    public static function getImgTag(string $fileName, string $mediaType, array $attributes = null): string
+    public static function getImgTag(string $fileName, string $mediaType, ?array $attributes = null, ?array $layout = null): string
     {
-        return self::getTag($fileName, $mediaType, $attributes);
+        return self::getTag($fileName, $mediaType, $attributes, self::IMG, null, $layout);
     }
 
     /**
      * helper to get an picture-Tag
      * @param string $fileName
      * @param string $mediaType
-     * @param array|null $attributes
-     * @param array|null $mediaQueries
+     * @param array<string, string|int>|null $attributes
+     * @param array<string, string>|null $mediaQueries
+     * @param array{containerWidth?: string, columns?: int, columnsTablet?: int, columnsMobile?: int, mediaFraction?: float}|null $layout
      * @return string
      */
-    public static function getPictureTag(string $fileName, string $mediaType, array $attributes = null, array $mediaQueries = null): string
+    public static function getPictureTag(string $fileName, string $mediaType, ?array $attributes = null, ?array $mediaQueries = null, ?array $layout = null): string
     {
         $additionalSources = null;
 
@@ -570,10 +665,14 @@ class rex_media_srcset
 
             foreach ($mediaQueries as $mediaQuery => $mediaQueryMediaType)
             {
-                $additionalSources[] = '<source srcset="' . self::getSrcSet($fileName, $mediaQueryMediaType) . '" media="' . $mediaQuery . '">';
+                $mediaQuerySrcset = self::getSrcSet($fileName, $mediaQueryMediaType);
+                if ('' === $mediaQuerySrcset) {
+                    continue;
+                }
+                $additionalSources[] = '<source srcset="' . rex_escape($mediaQuerySrcset) . '" media="' . rex_escape($mediaQuery) . '">';
             }
         }
 
-        return self::getTag($fileName, $mediaType, $attributes, self::PICTURE, $additionalSources);
+        return self::getTag($fileName, $mediaType, $attributes, self::PICTURE, $additionalSources, $layout);
     }
 }

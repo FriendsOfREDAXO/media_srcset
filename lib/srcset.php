@@ -522,7 +522,7 @@ class rex_media_srcset
      * @param string $mediaType
      * @param array<string, string|int>|null $attributes
      * @param int $tagType
-     * @param list<string>|null $additionalSources
+     * @param list<string>|null $additionalSources fertige <source>-HTML-Fragmente; werden unescaped ausgegeben und müssen vom Aufrufer escaped sein
      * @param array{containerWidth?: string, columns?: int, columnsTablet?: int, columnsMobile?: int, mediaFraction?: float}|null $layout
      * @return string
      */
@@ -540,19 +540,22 @@ class rex_media_srcset
             // routing through the media manager, which has nothing meaningful to do for them
             $srcset = '';
             $mediaSrc = \rex_url::media($fileName);
-            $imageSize = false;
+            $width = null;
+            $height = null;
         } else {
             $srcset = self::getSrcSet($fileName, $mediaType);
-            $mediaPath = \rex_path::addonCache('media_manager', $mediaType . '/' . $fileName);
 
-            // generate managed media object/media cache if not available
-            if (!file_exists($mediaPath)) {
-                \rex_media_manager::create($mediaType, $fileName);
-            }
+            // rex_media_manager::create() checks/regenerates the cache itself (via its
+            // own isCached() logic) and correctly accounts for any effect that relocates
+            // the cache path (e.g. media_negotiator's format/quality subfolders) - a
+            // manually reconstructed path can't, and would otherwise regenerate the
+            // cache file on every request instead of only the first time.
+            $managedMedia = \rex_media_manager::create($mediaType, $fileName)->getMedia();
 
             // raw, unescaped URL - rex_escape() is applied uniformly when the attribute string is built below
             $mediaSrc = \rex_media_manager::getUrl($mediaType, $fileName, null, false);
-            $imageSize = getimagesize($mediaPath);
+            $width = $managedMedia->getWidth();
+            $height = $managedMedia->getHeight();
         }
 
         if (!$attributes) {
@@ -563,9 +566,9 @@ class rex_media_srcset
         if ('' !== $srcset) {
             $attributes['srcset'] = $srcset;
         }
-        if ($imageSize !== false) {
-            $attributes['width'] = $imageSize[0];
-            $attributes['height'] = $imageSize[1];
+        if (null !== $width && null !== $height) {
+            $attributes['width'] = $width;
+            $attributes['height'] = $height;
         }
 
         if (empty($attributes['alt'])) {

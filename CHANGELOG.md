@@ -7,6 +7,45 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-09-23
+
+Major-Release mit einem zweiten, neuen Weg zur responsiven Bildausgabe: **Sets**. Statt für jeden Bildausschnitt einen eigenen Media-Manager-Typ zu pflegen, stecken Seitenverhältnis, Zuschnittsmodus und Breitenstufen in einer Konfigurationseinheit – als PHP-Array im Code oder als Formular im Backend.
+
+**Vollständig abwärtskompatibel.** Der bisherige Weg bleibt unverändert: `rex_media_srcset`, der Effekt `srcset`, die virtuellen Unterprofile `profil__breite`, `assets/srcset.js` und die HTML-Platzhalterersetzung verhalten sich exakt wie in 2.x. Bestehende Projekte können auf 3.0.0 aktualisieren, ohne eine Zeile zu ändern; beide Wege laufen im selben Projekt nebeneinander.
+
+Die Major-Nummer steht für den Funktionsumfang und die angehobenen Systemanforderungen, nicht für Breaking Changes an der bestehenden API.
+
+### 🚀 New Features (Neue Funktionen)
+
+#### Added (Hinzugefügt)
+
+- **Sets**: Ein Bild wird als `is_<set>__<breite>` angefragt, z. B. `/media/is_ratio_4_3__800/bild.jpg`. In der Datenbank existiert dafür nur ein einziger technischer Basistyp (`media_srcset_set`) – ein neues Bildformat für ein Modul heißt damit: ein Set registrieren, nicht einen Media-Manager-Typ anlegen und pflegen. Angefragte Breiten werden auf die nächste Stufe des Sets aufgerundet, damit die Zahl der Cache-Varianten begrenzt bleibt.
+- **Mitgelieferte Sets**: `ratio_16_9`, `ratio_21_9`, `ratio_4_3`, `ratio_1_1` und `ratio_original` stehen sofort bereit. Eigene Sets kommen über `MediaTypeRegistry::registerPreset()`, den Extension Point `MEDIA_SRCSET_PRESETS` oder den Backend-Builder dazu.
+- **`ResponsiveImage`** (`FriendsOfRedaxo\MediaSrcset\Media\ResponsiveImage`): Fluent Builder für `src`/`srcset`/`sizes` und fertige `<img>`/`<picture>`-Tags – mit layoutbasiertem `sizes` (Container-Breite, Spaltenzahl, Bildanteil, eigene Breakpoints), Art Direction über beliebig viele `<source>`, Dichte-Descriptoren (`1x/2x/3x`) für feste Darstellungsbreiten sowie automatischen `width`/`height`-Attributen gegen Layout-Sprünge.
+- **Descriptor-Garantie**: Breiten werden auf die Stufen des Sets gerundet und an der tatsächlich erreichbaren Quellbreite gekappt, damit jeder `srcset`-Descriptor der Pixelbreite der gelieferten Datei entspricht. Andernfalls lädt der Browser die falsche Variante.
+- **Alt-Text aus dem dafür vorgesehenen Feld** (`Media\AltText`): MediaPlace-Alt-Feld (inkl. Sprachvariante) → mehrsprachiges Metainfo-Feld `med_alt` → leer. Der Medienpool-Titel wird bewusst **nicht** als Alt-Text verwendet, weil ein Titel das Bild nicht für Screenreader beschreibt; ohne Alt-Text bzw. bei Markierung als dekorativ wird `alt="" role="presentation"` ausgegeben. Gilt nur für Sets – der bisherige Weg behält seinen Titel-Fallback unverändert.
+- **Backend unter Media Manager › srcset & Sets**: *Übersicht* (alle registrierten Sets), *Sets & Builder* (Sets anlegen und verwalten, Assistent zur Ableitung der Breitenstufen aus Layout-Angaben, Analyse der tatsächlichen Nutzung in Modulen und Templates gegen die Breiten im Medienpool, Vorschau mit serverseitigem Descriptor-Check und Simulation der Browser-Auswahl), *Demo & Prüfung*, *Einstellungen* und *Hilfe*.
+- **Vorverarbeitung je Set (`chain`)**: Ein Set kann die Effekte bestehender Media-Manager-Typen als Bausteine wiederverwenden, z. B. `watermark,make_greyscale`. Die Kette läuft vor dem Zuschnitt in voller Quellauflösung und vollständig auf dem bereits geladenen `rex_managed_media` – ohne Zwischendateien und ohne erneutes Encodieren je Schritt, also ohne Qualitätsverlust. Größen-Effekte (`resize`, `srcset`, `media_srcset_set`) werden übersprungen, damit die Zielbreite allein beim Set liegt; Selbstreferenzen und Zyklen werden erkannt (max. 5 Ebenen), Fehler protokolliert und übersprungen, statt die Bildauslieferung zu verhindern.
+- **Schalter für die HTML-Platzhalterersetzung** (Media Manager › srcset & Sets › Einstellungen). Der `OUTPUT_FILTER` durchsucht jede Seitenausgabe per regulärem Ausdruck; Projekte, die ausschließlich die PHP-API nutzen, können ihn abschalten und sparen diesen Lauf. Standard: bei **Neuinstallationen aus**, bei **Updates bestehender Installationen an**, damit vorhandene Templates nicht still aufhören zu funktionieren. Eine getroffene Entscheidung wird von späteren Updates nie überschrieben.
+- **Extension Point `MEDIA_SRCSET_PRESETS`** zum Ergänzen und Ändern von Sets aus anderen Addons.
+- **Englische Übersetzung** (`en_gb`) mit vollständiger Abdeckung, dazu `README.en.md` und `API.en.md`.
+
+#### Changed (Geändert)
+
+- Mindestanforderungen auf **REDAXO ^5.18.0** und **PHP >= 8.1** angehoben.
+- Die Installation legt den Media-Manager-Typ `media_srcset_set` an. Er ist rein technisch und wird nie direkt verwendet – alle `is_*`-Anfragen laufen darüber.
+- README vollständig überarbeitet: stellt beide Wege gegenüber und sagt, wann welcher passt.
+
+### 🧹 Code Quality
+
+- Statische Analyse (PHPStan/rexstan, Level 8) über das gesamte Addon auf **0 Findings** gebracht: präzisere Array-Shapes für aufgelöste Sets, entfernte tote `??`-Zweige und nie-falsche Typprüfungen, ergänzte Docblock-Typen sowie ein möglicher Zugriff auf `end()` eines leeren Arrays in `ResponsiveImage::resolveSrc()`.
+- In der Vorverarbeitung wird vor dem Instanziieren geprüft, dass die Effektklasse tatsächlich von `rex_effect_abstract` erbt.
+
+### Hinweise
+
+- **focuspoint ist optional.** Mit installiertem Addon folgen Ratio-Zuschnitte dem im Medienpool gesetzten Fokuspunkt, ohne wird zentriert geschnitten. Die Ausgabemaße sind in beiden Fällen identisch, es unterscheidet sich nur, *wo* geschnitten wird.
+- **media_negotiator** wird unterstützt: Der Cache-Pfad wird pro Ausgabeformat getrennt, sodass Sets als AVIF oder WebP ausgeliefert werden.
+
 ## [2.3.0] - 2026-09-04
 
 Baut auf [2.2.1](#221---2026-09-04) auf (Sicherheitsfix, siehe dort).

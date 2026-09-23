@@ -1,181 +1,87 @@
 # media_srcset
 
-Addon, das dem REDAXO Media Manager einen neuen Effekt `srcset` hinzufügt (basierend auf dem `resize`-Effekt) und eine PHP-API bereitstellt, mit der sich `<img>`- und `<picture>`-Tags inklusive `srcset`/`sizes`-Attribut erzeugen lassen – ohne für jede benötigte Bildbreite einen eigenen Media-Manager-Typ anlegen zu müssen. Rewrite-URLs von yRewrite werden unterstützt.
+Responsive Bildausgabe für REDAXO: `srcset`, `sizes` und `<picture>`, ohne für jede Bildbreite einen eigenen Media-Manager-Typ anzulegen.
+
+Das Addon bietet dafür **zwei Wege**, die sich nicht ausschließen und im selben Projekt nebeneinander laufen können:
+
+| | **Effekt `srcset`** (klassisch) | **Sets** |
+|---|---|---|
+| Konfiguration liegt in | je einem echten Media-Manager-Typ | einem Set (Code-Array oder Backend-Formular) |
+| Zuschnitt/Ratio je Anwendungsfall | eigener Media-Manager-Typ pro Ausschnitt | ein Set pro Ausschnitt, kein DB-Typ nötig |
+| Breitenstufen | virtuelle Untertypen `hero__400` | virtuelle Typen `is_<set>__<breite>` |
+| PHP-API | `rex_media_srcset::getImgTag()` | `ResponsiveImage::forFile()` |
+| Alt-Text | Medienpool-Titel als Fallback | eigenes Alt-Feld, Titel bewusst **nicht** |
+
+**Kurz:** Der klassische Weg automatisiert die Breitenstufen unterhalb bestehender Media-Manager-Typen. Sets ersetzen die Typen selbst durch eine Konfigurationsebene und brauchen in der ganzen Installation nur einen einzigen technischen Typ.
+
+Bestehende Projekte müssen nichts ändern: Der klassische Weg ist unverändert erhalten, inklusive `rex_media_srcset` und der HTML-Platzhalterersetzung.
+
+Backend: **Media Manager › srcset & Sets** mit *Übersicht*, *Sets & Builder*, *Demo & Prüfung*, *Einstellungen* und *Hilfe*.
 
 ## Inhalt
 
 - [Installation](#installation)
-- [Hintergrund und Funktionsweise](#hintergrund-und-funktionsweise)
-- [Verwendung im Media Manager](#verwendung-im-media-manager)
-- [Öffentliche API](#öffentliche-api)
-  - [`getImgTag()`](#getimgtag)
-  - [`getPictureTag()`](#getpicturetag)
-  - [`getSrcSet()`](#getsrcset)
-  - [`getTag()`](#gettag)
-- [Beispiele](#beispiele)
-  - [Einfaches Bild](#einfaches-bild)
-  - [Eigene Attribute](#eigene-attribute)
-  - [Art Direction mit `<picture>`](#art-direction-mit-picture)
-  - [Layout-basiertes `sizes`-Attribut](#layout-basiertes-sizes-attribut)
-  - [Manuelles `sizes`-Attribut](#manuelles-sizes-attribut)
-  - [SVG-Dateien](#svg-dateien)
-- [Automatischer HTML-Ersatz (OUTPUT_FILTER)](#automatischer-html-ersatz-output_filter)
-- [srcset.js – Auflösung nach tatsächlicher Elementbreite](#srcsetjs--auflösung-nach-tatsächlicher-elementbreite)
+- [Weg 1: Effekt `srcset`](#weg-1-effekt-srcset-auf-einem-media-manager-typ)
+  - [Öffentliche API](#öffentliche-api-rex_media_srcset)
+  - [Automatischer HTML-Ersatz](#automatischer-html-ersatz-output_filter)
+  - [srcset.js](#srcsetjs--auflösung-nach-tatsächlicher-elementbreite)
+- [Weg 2: Sets](#weg-2-sets)
+  - [Funktionsweise](#funktionsweise)
+  - [Sets definieren](#sets-definieren)
+  - [Verwendung im Code](#verwendung-im-code)
+  - [Art Direction](#art-direction)
+  - [Descriptor-Garantie](#descriptor-garantie)
+- [Vorverarbeitung: Effekte anderer Typen einbinden](#vorverarbeitung-effekte-anderer-typen-einbinden)
+- [Backend-Seiten](#backend-seiten)
+- [Welchen Weg wählen?](#welchen-weg-wählen)
+- [Zusammenspiel mit anderen Addons](#zusammenspiel-mit-anderen-addons)
+- [Cache und Fehlersuche](#cache-und-fehlersuche)
 - [Sicherheit](#sicherheit)
 - [Anforderungen](#anforderungen)
-- [Changelog](#changelog)
-- [Credits](#credits)
 
 ## Installation
 
-* Release herunterladen und entpacken.
-* Ordner umbenennen in `media_srcset`.
-* In den AddOns-Ordner legen: `/redaxo/src/addons`.
-* Im Backend installieren und aktivieren (Abhängigkeit: `media_manager`).
+- Release herunterladen, entpacken, Ordner in `media_srcset` umbenennen und nach `/redaxo/src/addons` legen.
+- Im Backend installieren und aktivieren (Abhängigkeit: `media_manager`).
 
-## Hintergrund und Funktionsweise
+Bei der Installation wird der Media-Manager-Typ `media_srcset_set` angelegt. Er ist rein technisch und wird **nie direkt verwendet** – alle `is_*`-Anfragen laufen darüber.
 
-### Erklärung der `srcset`-Attribute für optimale Bilddarstellung
+---
 
-Wenn du Bilder auf deiner Website einfügst und sicherstellen möchtest, dass sie sowohl auf Desktop- als auch auf Mobilgeräten optimal angezeigt werden, ohne tausende neue MediaManager-Typen anzulegen, kannst du mit diesem Addon automatisiert die `srcset`- und `sizes`-Attribute in HTML verwenden.
+# Weg 1: Effekt `srcset` auf einem Media-Manager-Typ
 
-#### Beispiel für einen `srcset`-Eingabe-String im Addon:
-
-```
-470 470w, 940 470w 2x, 1410 470w 3x
-```
-
-Dieser String wird im MM-Typ im Feld des `srcset`-Effekts angegeben.
-
-### Was bedeutet dieser `srcset`-String?
-
-1. **470 470w**
-   - **470**: Die Breite des Bildes in Pixeln (470px), die tatsächlich erzeugt wird.
-   - **470w**: Diese Größe ist für Bildschirme mit normaler (1x) Auflösung gedacht. Das Bild wird im Layout in 470px Breite angezeigt.
-
-2. **940 470w 2x**
-   - **940**: Die Breite des erzeugten Bildes in Pixeln (940px), gedacht für Bildschirme mit doppelter (2x) Auflösung.
-   - **470w**: Das Bild wird im Layout weiterhin 470px breit angezeigt, aber für hochauflösende (Retina) Displays verwendet.
-
-3. **1410 470w 3x**
-   - **1410**: Die Breite des erzeugten Bildes in Pixeln (1410px), gedacht für Bildschirme mit dreifacher (3x) Auflösung.
-   - **470w**: Das Bild wird im Layout weiterhin 470px breit angezeigt, aber für sehr hochauflösende Displays verwendet.
-
-### Welche Auswirkungen hat das?
-
-1. **Desktop-Bildschirme:**
-   - **Normale Displays (1x)**: Das Bild wird in seiner Basisgröße von 470px angezeigt.
-   - **Retina Displays (2x)**: Der Browser verwendet das Bild mit 940px Breite, zeigt es aber auf dem Bildschirm in 470px Breite an – sorgt für eine schärfere Darstellung.
-   - **Displays mit 3x-Auflösung**: Der Browser verwendet das Bild mit 1410px Breite, zeigt es aber weiterhin in 470px Breite an.
-
-2. **Mobile Geräte:**
-   - Die gleiche Logik wie auf Desktops wird angewendet. Der Browser wählt das am besten passende Bild basierend auf Bildschirmauflösung und -größe aus.
-
-### Einfluss auf das `sizes`-Attribut
-
-Das `sizes`-Attribut gibt an, wie groß das Bild im Layout bei verschiedenen Viewport-Breiten tatsächlich angezeigt wird. Beispiel:
-
-```html
-<img src="/path/to/default.jpg"
-     srcset="/path/to/image-470.jpg 470w,
-             /path/to/image-940.jpg 940w 2x,
-             /path/to/image-1410.jpg 1410w 3x"
-     sizes="(max-width: 600px) 100vw, 470px"
-     alt="Beispielbild">
-```
-
-- **`(max-width: 600px) 100vw`**: Bei maximal 600px Viewport-Breite (z. B. Mobilgeräte) nimmt das Bild die volle Bildschirmbreite ein (100vw).
-- **`470px`**: Auf größeren Bildschirmen wird das Bild in fester 470px-Breite angezeigt.
-
-Der `srcset`-String gibt dem Browser verschiedene Bildkandidaten zur Auswahl; das `sizes`-Attribut sagt dem Browser, wie breit der jeweilige Slot im Layout tatsächlich ist, damit er daraus den passenden Kandidaten auswählen kann. Ohne ein sinnvolles `sizes`-Attribut wählt der Browser tendenziell zu große Bilder.
-
-## Verwendung im Media Manager
-
-Im Effekt-Feld `srcset` die gewünschten Breiten-Angaben eintragen – statt eines Dateinamens wird nur die gewünschte Bildbreite verwendet:
+Ein Media-Manager-Typ (z. B. `hero`) bekommt den Effekt **Bild: SRCSET** mit einem Konfigurationsstring:
 
 ```
 400 480w, 800 480w 2x, 700 768w
 ```
 
-Das Profil selbst (z. B. `hero`) bleibt ein ganz normaler Media-Manager-Typ. Für jede im String angegebene Bildbreite (`400`, `700`, `800`) erzeugt das Addon zur Laufzeit ein virtuelles Unterprofil `hero__400`, `hero__700`, `hero__800`, das die restlichen Effekte des Basisprofils übernimmt und nur `width`/`height` überschreibt – dafür muss nichts zusätzlich im Backend angelegt werden.
+Format je Eintrag: `<Bildbreite in px> <Viewport-Breite>w [<Pixeldichte>x]`.
 
-## Öffentliche API
+- **400 480w** – erzeugt ein 400 px breites Bild, gedacht für einen 480 px breiten Slot.
+- **800 480w 2x** – 800 px Datei für denselben Slot auf Retina-Displays.
+- **700 768w** – 700 px Datei für einen 768 px breiten Slot.
 
-Alle Methoden befinden sich in der statischen Klasse `rex_media_srcset`.
+Für jede Bildbreite entsteht zur Laufzeit ein virtuelles Unterprofil `hero__400`, `hero__700`, `hero__800`, das alle übrigen Effekte des Basisprofils übernimmt und nur `width`/`height` überschreibt. Im Backend muss dafür nichts zusätzlich angelegt werden.
 
-### `getImgTag()`
+Eine angefragte Breite ohne exakte Entsprechung wird auf die nächstgrößere konfigurierte Breite aufgerundet.
 
-```php
-rex_media_srcset::getImgTag(
-    string $fileName,
-    string $mediaType,
-    ?array $attributes = null,
-    ?array $layout = null
-): string
-```
-
-Erzeugt ein vollständiges `<img>`-Tag mit `src`, `srcset`, `width`, `height`, `alt` (Fallback: Medienpool-Titel) und `sizes`.
-
-- `$attributes`: zusätzliche/überschreibende HTML-Attribute, z. B. `['class' => 'hero-image', 'loading' => 'lazy']`. Ein hier gesetztes `alt` oder `sizes` hat immer Vorrang vor der automatischen Ermittlung.
-- `$layout`: optional, siehe [Layout-basiertes `sizes`-Attribut](#layout-basiertes-sizes-attribut).
-
-Bei `.svg`-Dateien wird ausschließlich `src` (direkter Medienpool-Link) und `alt` gesetzt – kein `srcset`/`sizes`, siehe [SVG-Dateien](#svg-dateien).
-
-### `getPictureTag()`
+## Öffentliche API (`rex_media_srcset`)
 
 ```php
-rex_media_srcset::getPictureTag(
-    string $fileName,
-    string $mediaType,
-    ?array $attributes = null,
-    ?array $mediaQueries = null,
-    ?array $layout = null
-): string
-```
-
-Erzeugt ein `<picture>`-Element. `$mediaType` ist das Profil für den `<img>`-Fallback. `$mediaQueries` ist eine Zuordnung `CSS-Media-Query => Media-Manager-Typ` – für jeden Eintrag wird ein eigenes `<source media="…" srcset="…">` erzeugt. Da pro Media-Query ein eigenes Profil angegeben wird, lässt sich damit auch **Art Direction** abbilden (unterschiedliche Bildausschnitte/Seitenverhältnisse je Breakpoint, nicht nur unterschiedliche Auflösungen desselben Ausschnitts) – siehe [Beispiel](#art-direction-mit-picture).
-
-### `getSrcSet()`
-
-```php
+rex_media_srcset::getImgTag(string $fileName, string $mediaType, ?array $attributes = null, ?array $layout = null): string
+rex_media_srcset::getPictureTag(string $fileName, string $mediaType, ?array $attributes = null, ?array $mediaQueries = null, ?array $layout = null): string
 rex_media_srcset::getSrcSet(string $fileName, string $mediaType): string
+rex_media_srcset::getTag(string $fileName, string $mediaType, ?array $attributes = null, int $tagType = rex_media_srcset::IMG, ?array $additionalSources = null, ?array $layout = null): string
 ```
 
-Liefert nur den rohen `srcset`-Wert (z. B. für eigene, abweichende Tag-Strukturen). Liefert einen leeren String bei `.svg`-Dateien oder wenn das Profil keinen `srcset`-Effekt konfiguriert hat. **Der Rückgabewert ist nicht HTML-escaped** – beim direkten Einbau in eigenes Markup selbst `rex_escape()` anwenden.
-
-### `getTag()`
-
-```php
-rex_media_srcset::getTag(
-    string $fileName,
-    string $mediaType,
-    ?array $attributes = null,
-    int $tagType = rex_media_srcset::IMG,
-    ?array $additionalSources = null,
-    ?array $layout = null
-): string
-```
-
-Die von `getImgTag()`/`getPictureTag()` intern genutzte Basismethode. `$tagType` ist `rex_media_srcset::IMG` oder `rex_media_srcset::PICTURE`; `$additionalSources` sind bereits fertige `<source>`-HTML-Fragmente, die vor dem generierten Fallback-`<source>` eingefügt werden. Direkter Aufruf nur nötig, wenn `getImgTag()`/`getPictureTag()` nicht ausreichen.
-
-## Beispiele
-
-### Einfaches Bild
+Einfaches Bild:
 
 ```php
 echo rex_media_srcset::getImgTag('teamfoto.jpg', 'hero');
 ```
 
-```html
-<img src="index.php?rex_media_type=hero&amp;rex_media_file=teamfoto.jpg"
-     srcset="index.php?rex_media_type=hero__400&amp;rex_media_file=teamfoto.jpg 480w,
-             index.php?rex_media_type=hero__700&amp;rex_media_file=teamfoto.jpg 768w,
-             index.php?rex_media_type=hero__800&amp;rex_media_file=teamfoto.jpg 960w"
-     width="500" height="333" alt=""
-     sizes="(max-width: 480px) 480px, (max-width: 768px) 768px, (max-width: 960px) 960px, 500px"/>
-```
-
-### Eigene Attribute
+Mit eigenen Attributen (`alt` und `sizes` haben immer Vorrang vor der automatischen Ermittlung):
 
 ```php
 echo rex_media_srcset::getImgTag('teamfoto.jpg', 'hero', [
@@ -185,138 +91,266 @@ echo rex_media_srcset::getImgTag('teamfoto.jpg', 'hero', [
 ]);
 ```
 
-`alt` und beliebige weitere Attribute werden übernommen; ein hier gesetztes `alt` überschreibt den automatischen Fallback auf den Medienpool-Titel.
-
-### Art Direction mit `<picture>`
+Art Direction mit `<picture>` – je Media Query ein eigener Media-Manager-Typ, der einen anderen Zuschnitt haben darf:
 
 ```php
-echo rex_media_srcset::getPictureTag('teamfoto.jpg', 'hero_desktop', [
-    'class' => 'hero-image',
-], [
+echo rex_media_srcset::getPictureTag('teamfoto.jpg', 'hero_desktop', ['class' => 'hero-image'], [
     '(max-width: 719px)' => 'hero_mobile_portrait',
 ]);
 ```
 
-```html
-<picture>
-    <source srcset="…teamfoto.jpg 480w, …teamfoto.jpg 768w, …teamfoto.jpg 960w" media="(max-width: 719px)">
-    <source srcset="…teamfoto.jpg 480w, …teamfoto.jpg 768w, …teamfoto.jpg 960w" type="image/jpeg">
-    <img class="hero-image" src="…teamfoto.jpg" width="…" height="…" alt="…"/>
-</picture>
-```
-
-`hero_mobile_portrait` kann dabei ein komplett anderes Seitenverhältnis/Crop (z. B. via Focuspoint- oder Crop-Effekt) konfiguriert haben als `hero_desktop` – so lässt sich derselbe Quellfile responsiv mit unterschiedlichen Bildausschnitten je Viewport ausgeben.
-
-### Layout-basiertes `sizes`-Attribut
-
-Standardmäßig wiederholt das automatisch erzeugte `sizes`-Attribut lediglich die im Profil konfigurierten Breakpoints. Für ein layoutgetreueres `sizes` kann stattdessen aus Container-Breite und Spaltenzahl gerechnet werden:
+Layout-basiertes `sizes` statt bloßer Wiederholung der Breakpoints:
 
 ```php
 echo rex_media_srcset::getImgTag('teamfoto.jpg', 'hero', null, [
-    'containerWidth'  => 'uk-container',        // grobe Schätzung der Container-Maximalbreite
-    'columns'         => 3,                     // Spalten ab Desktop-Breakpoint (≥1200px)
-    'columnsTablet'   => 2,                     // Spalten zwischen 640px und 1200px
-    'columnsMobile'   => 1,                     // Spalten unter 640px
-    'mediaFraction'   => 1.0,                   // Anteil der Spaltenbreite, den das Bild einnimmt (0.05–1.0)
+    'containerWidth' => 'uk-container',  // Schätzung der Container-Maximalbreite
+    'columns'        => 3,               // Spalten ab 1200 px
+    'columnsTablet'  => 2,               // Spalten zwischen 640 und 1200 px
+    'columnsMobile'  => 1,               // Spalten unter 640 px
+    'mediaFraction'  => 1.0,             // Anteil der Spalte (0.05–1.0)
 ]);
+// sizes="(min-width: 1200px) 400px, (min-width: 640px) 50vw, 100vw"
 ```
 
-Erzeugt z. B. `sizes="(min-width: 1200px) 400px, (min-width: 640px) 50vw, 100vw"`. Alle Schlüssel sind optional (Default: `containerWidth = 'uk-container'`, `columns = 3`, `columnsTablet = 2`, `columnsMobile = 1`, `mediaFraction = 1.0`). Ohne `$layout`-Parameter bleibt das bisherige Verhalten unverändert – der Parameter ist rein additiv und ändert nichts an bestehenden Aufrufen.
+`.svg`-Dateien werden erkannt und direkt aus dem Medienpool ausgeliefert – ohne Media-Manager, ohne `srcset`/`sizes`. SVGs skalieren im Browser ohnehin verlustfrei.
 
-### Manuelles `sizes`-Attribut
-
-Ein explizit gesetztes `sizes` in `$attributes` hat immer Vorrang, unabhängig davon ob `$layout` übergeben wird:
-
-```php
-echo rex_media_srcset::getImgTag('teamfoto.jpg', 'hero', ['sizes' => '100vw']);
-```
-
-### SVG-Dateien
-
-SVGs werden automatisch erkannt und ohne Media-Manager-Routing direkt aus dem Medienpool ausgeliefert – kein `srcset`, kein `sizes`, kein Media-Manager-Cache:
-
-```php
-echo rex_media_srcset::getImgTag('logo.svg', 'hero');
-// <img src="/media/logo.svg" alt=""/>
-```
-
-Das gilt unabhängig davon, welcher `$mediaType` übergeben wird.
+`getSrcSet()` liefert bewusst einen **unescapten** Rohwert; beim direkten Einbau in eigenes Markup selbst `rex_escape()` anwenden.
 
 ## Automatischer HTML-Ersatz (OUTPUT_FILTER)
 
-Alternativ zur programmatischen API kann `srcset="rex_media_type=ProfilName"` direkt im Template-HTML stehen; das Addon ersetzt es beim Rendern automatisch:
-
-#### Eingabe:
+Alternativ kann `srcset="rex_media_type=ProfilName"` direkt im Template stehen; das Addon ersetzt den Platzhalter beim Rendern:
 
 ```html
-<img src="index.php?rex_media_type=ImgTypeName&rex_media_file=ImageFileName"
-    srcset="rex_media_type=ImgTypeName" />
+<img src="index.php?rex_media_type=hero&rex_media_file=bild.jpg" srcset="rex_media_type=hero" />
 ```
 
-#### Generierte Ausgabe:
+Das funktioniert auch für `<picture>` mit mehreren `<source srcset="rex_media_type=…">`.
 
-```html
-<img src="index.php?rex_media_type=ImgTypeName&rex_media_file=ImageFileName"
-    srcset="index.php?rex_media_type=ImgTypeName__400&rex_media_file=ImageFileName 480w
-            index.php?rex_media_type=ImgTypeName__700&rex_media_file=ImageFileName 768w
-            index.php?rex_media_type=ImgTypeName__800&rex_media_file=ImageFileName 960w
-    ">
-```
+> **Altlast.** Dieser Weg durchsucht **jede** Seitenausgabe per regulärem Ausdruck und bietet weniger Kontrolle als die PHP-API (kein `alt`-Fallback, kein `sizes`, keine SVG-Sonderbehandlung). Für neuen Code `getImgTag()` / `getPictureTag()` oder Sets verwenden.
 
-Ebenso für `<picture>`-Elemente mit mehreren `<source srcset="rex_media_type=…">`-Platzhaltern. Dieser Weg ist praktisch für Bestandscode/Redakteursinhalte, bietet aber weniger Kontrolle (kein `alt`-Fallback, kein `sizes`, keine SVG-Sonderbehandlung) als die programmatische API – für neuen Code wird `getImgTag()`/`getPictureTag()` empfohlen.
+Abschaltbar unter **Media Manager › srcset & Sets › Einstellungen**. Standard:
+
+- **Neuinstallation:** aus – neue Projekte nutzen die PHP-API, der Regex-Lauf wäre unnötige Last.
+- **Update einer bestehenden Installation:** an – dort können Templates den Platzhalter verwenden, der sonst still aufhören würde zu funktionieren.
+
+Eine einmal getroffene Entscheidung wird von späteren Updates nie überschrieben.
 
 ## srcset.js – Auflösung nach tatsächlicher Elementbreite
 
-Das `srcset`-Attribut kann auch als `data-srcset`-Attribut eingebunden werden. Dann lädt der Browser zunächst das Standardbild (`src`-Attribut). Wird zusätzlich
+Wird das Attribut als `data-srcset` ausgegeben und
 
 ```html
-<script type="text/javascript" src="assets/addons/media_srcset/srcset.js"></script>
+<script src="assets/addons/media_srcset/srcset.js"></script>
 ```
 
-eingebunden, prüft ein Skript beim Laden der Seite sowie nach jedem Resize die tatsächliche Anzeigebreite jedes Elements und lädt bei Bedarf eine passendere Datei nach. So orientiert sich die Bildauswahl an der tatsächlich gerenderten Elementbreite statt nur am Viewport. Das Bild braucht dafür zwingend:
+eingebunden, prüft ein Skript beim Laden und nach jedem Resize die tatsächliche Anzeigebreite jedes Elements und lädt bei Bedarf eine passendere Datei nach. Die Auswahl orientiert sich damit an der gerenderten Elementbreite statt nur am Viewport. Dafür nötig:
 
 ```css
-img[data-srcset] {
-    width: 100%;
-    height: auto;
-}
+img[data-srcset] { width: 100%; height: auto; }
 ```
 
-### Beispiel
+---
 
-Eingabe:
+# Weg 2: Sets
 
-```html
-<img width="500" src="index.php?rex_media_type=ImgTypeName&rex_media_file=ImageFileName"
-    data-srcset="rex_media_type=ImgTypeName">
+Ein **Set** bündelt Seitenverhältnis, Zuschnittsmodus und die erlaubten Breitenstufen in einer Konfigurationseinheit – als PHP-Array im Code oder als Eintrag im Backend-Builder. Ein Bild wird als `is_<set>__<breite>` angefragt, z. B. `/media/is_ratio_4_3__800/bild.jpg`.
+
+Ein neues Bildformat für ein einzelnes Modul heißt damit: ein Set registrieren (eine Codezeile oder ein Formular) – nicht: einen Media-Manager-Typ anlegen, konfigurieren und pflegen.
+
+## Funktionsweise
+
+1. **Sets** definieren Ratio, Modus und Breitenstufen, z. B. `ratio_4_3` mit `400, 800, 1200, 1600, 2000`.
+2. Ein Bild wird als `is_<set>__<breite>` angefragt. `MEDIA_MANAGER_FILTERSET` setzt dafür dynamisch den Effekt `media_srcset_set` ein; in der Datenbank existiert nur der Basistyp `media_srcset_set`.
+3. Der Effekt wendet optional die **Vorverarbeitung** an, schneidet **dann** auf das Seitenverhältnis (Fokuspunkt, sonst zentriert) und skaliert **danach** breitenbegrenzt. Vergrößert wird nie.
+4. `ResponsiveImage` baut daraus `src`, `srcset` und `sizes`.
+
+Angefragte Breiten werden auf die nächste Stufe **aufgerundet**: `is_ratio_4_3__900` liefert die 1200er-Stufe. So bleibt die Zahl der Cache-Varianten begrenzt.
+
+## Sets definieren
+
+Zwei Quellen, beide landen in derselben Registry:
+
+| Quelle | Wo | Wer |
+|---|---|---|
+| **Code** | `boot.php` des Addons oder eines Projekt-Addons via `MediaTypeRegistry::registerPreset()` bzw. Extension Point `MEDIA_SRCSET_PRESETS` | Entwickler |
+| **Builder** | Backend › *Sets & Builder*, gespeichert in der Addon-Konfiguration | Redaktion und Entwickler |
+
+Grundausstattung:
+
+| Set | Ratio | Modus | Breiten | Standard |
+|---|---|---|---|---|
+| `ratio_16_9` | 16:9 | focuspoint | 400, 800, 1200, 1600, 2000 | 1200 |
+| `ratio_21_9` | 21:9 | focuspoint | 400, 800, 1200, 1600, 2000 | 1200 |
+| `ratio_4_3` | 4:3 | focuspoint | 400, 800, 1200, 1600, 2000 | 1200 |
+| `ratio_1_1` | 1:1 | focuspoint | 400, 800, 1200, 1600 | 1200 |
+| `ratio_original` | Quelle | resize | 400 … 2400 | 1600 |
+
+Code-Sets sind im Backend schreibgeschützt; Builder-Sets dürfen deren Namen nicht verwenden.
+
+```php
+use FriendsOfRedaxo\MediaSrcset\Config\MediaTypeRegistry;
+
+MediaTypeRegistry::registerPreset('teaser_3_2', [
+    'ratio' => '3_2',            // Breite_Höhe oder 'original'
+    'mode' => 'focuspoint',      // focuspoint | resize
+    'widths' => [400, 800, 1200, 1600],
+    'default_width' => 1200,
+    'chain' => '',               // optional, siehe Vorverarbeitung
+]);
 ```
 
-Ausgabe (Erstladung, Elementbreite ≈700px):
+## Verwendung im Code
 
-```html
-<img src="index.php?rex_media_type=ImgTypeName__700&rex_media_file=ImageFileName"
-    data-srcset="index.php?rex_media_type=ImgTypeName__400&rex_media_file=ImageFileName 480w
-                 index.php?rex_media_type=ImgTypeName__700&rex_media_file=ImageFileName 768w
-                 index.php?rex_media_type=ImgTypeName__800&rex_media_file=ImageFileName 960w
-    ">
+Eine feste Breite:
+
+```php
+echo '<img src="' . rex_media_manager::getUrl('is_ratio_16_9__1200', $file) . '" alt="…">';
 ```
 
-Bei kleinerer gerenderter Breite (z. B. 200px) wird stattdessen `ImgTypeName__400` geladen, bei sehr großer Breite (z. B. 1200px) `ImgTypeName__960` (das größte verfügbare Profil).
+Responsive Ausgabe:
+
+```php
+use FriendsOfRedaxo\MediaSrcset\Media\ResponsiveImage;
+
+echo ResponsiveImage::forFile($file)
+    ->withDesktopPreset('ratio_4_3')      // Set für srcset
+    ->withMobilePreset('ratio_1_1')       // optional: eigenes Ratio unter dem Mobile-Breakpoint
+    ->withWidths([400, 800, 1200, 1600])  // gewünschte Stufen (werden auf Set-Stufen gerundet)
+    ->withContainerWidth('uk-container')  // uk-container(-xsmall|-small|-large|-xlarge) oder 'expand'
+    ->withColumns(3, 2, 1)                // Spalten Desktop / Tablet / Mobil
+    ->withMediaFraction(0.5)              // Anteil des Bildes an der Spalte
+    ->withBreakpoints(960, 1200)          // Breakpoints des eigenen Layouts (Standard 640/1200)
+    ->toImageTag(['alt' => $alt, 'class' => 'uk-width-1-1']);
+```
+
+Weitere Ausgaben: `toImage()`, `toPicture()`, `toPictureTag()`, `getSrcsetEntries()`, `getEffectiveWidths()`, `getSourceMaxWidth()`, `getDimensions()`, `withCapToSource(false)`, `withSizes()`.
+
+### Attribute des `<img>`
+
+`toImageTag()` setzt automatisch:
+
+- **`width` und `height`** der `src`-Variante, damit der Browser den Platz vor dem Laden reserviert. Eigene Werte haben Vorrang.
+- **`alt`** nach der Regel: übergeben (`['alt' => …]` oder `withAlt()`) > MediaPlace-Alt-Feld (inkl. Sprachvariante) > klassisches `med_alt` > leer. Der Medienpool-**Titel ist kein Alt-Text** und wird nie verwendet. Ohne Alt-Text oder bei Markierung als dekorativ wird `alt="" role="presentation"` ausgegeben.
+- **`loading="lazy" decoding="async"`**; `withPriority()` liefert stattdessen `loading="eager" fetchpriority="high"` für das LCP-Bild.
+
+Die Alt-Regel steht auch eigenem Code zur Verfügung: `AltText::resolve($media, $clangId)`.
+
+### Feste Größen mit Dichte-Descriptoren
+
+Für Logos, Avatare oder Icons mit fester Darstellungsbreite ersetzt `withDensities()` das `sizes`-Attribut durch `1x/2x/3x`:
+
+```php
+echo ResponsiveImage::forFile($logo)
+    ->withDesktopPreset('logo_1_1')
+    ->withWidths([200])
+    ->withDensities([1, 2, 3])
+    ->toImageTag(['alt' => 'Firmenlogo']);
+```
+
+Wird die Quelle vorher erreicht, sinkt der Descriptor entsprechend (z. B. `1.5x`), damit er der gelieferten Datei entspricht.
+
+## Art Direction
+
+1. **Bildausschnitt je Bild (Fokuspunkt):** Jeder Ratio-Zuschnitt wird um den im Medienpool gesetzten Fokuspunkt gelegt – ohne Code, pro Bild, durch die Redaktion.
+2. **Anderes Seitenverhältnis je Bildschirmbreite:** `withSource()` fügt beliebig viele `<source>` mit eigener Media Query hinzu (Aufrufreihenfolge = Reihenfolge im Markup).
+
+```php
+echo ResponsiveImage::forFile($file)
+    ->withDesktopPreset('ratio_21_9')
+    ->withSource('(max-width: 639px)', 'ratio_1_1', ['widths' => [400, 800], 'sizes' => '100vw'])
+    ->withSource('(max-width: 1199px)', 'ratio_4_3')
+    ->toPictureTag(['loading' => 'lazy']);
+```
+
+Beide Zuschnitte folgen demselben Fokuspunkt. Nicht vorgesehen ist ein komplett anderes Bild je Breakpoint; dafür zwei Medienfelder anlegen.
+
+## Descriptor-Garantie
+
+Ein `srcset`-Descriptor (`800w`) muss der Pixelbreite der Datei entsprechen, sonst wählt der Browser falsch. `ResponsiveImage` sorgt dafür durch:
+
+- Runden der gewünschten Breiten auf Set-Stufen (nur diese Dateien existieren).
+- Kappen an der Quelle: Stufen oberhalb der erreichbaren Breite entfallen; als größte Variante wird die Quellbreite mit korrektem Descriptor angehängt.
+- Die Reihenfolge Vorverarbeitung → Zuschnitt → Skalierung, damit auch Hochformat-Quellen die volle Zielbreite erreichen.
+
+---
+
+## Vorverarbeitung: Effekte anderer Typen einbinden
+
+Ein Set kann die Effekte **bestehender Media-Manager-Typen** als Bausteine wiederverwenden – etwa ein Wasserzeichen oder einen Farbfilter, der bereits als Typ gepflegt wird:
+
+```php
+MediaTypeRegistry::registerPreset('teaser_sw', [
+    'ratio' => '4_3',
+    'mode' => 'focuspoint',
+    'widths' => [400, 800, 1200],
+    'chain' => 'watermark,make_greyscale',   // kommagetrennte Media-Manager-Typen
+]);
+```
+
+Im Builder steht dafür das Feld *Vorverarbeitung* zur Verfügung.
+
+Die Kette läuft **vor** dem Zuschnitt, also in voller Quellauflösung, und vollständig im Arbeitsspeicher – ohne Zwischendateien und ohne erneutes Encodieren je Schritt.
+
+Regeln:
+
+- **Größen-Effekte werden übersprungen** (`resize`, `srcset`, `media_srcset_set`). Die Zielbreite bestimmt allein das Set, sonst wäre der `srcset`-Descriptor nicht mehr die tatsächliche Dateibreite.
+- Nicht vorhandene Typen werden übersprungen.
+- Selbstreferenzen und Zyklen werden erkannt, die Verschachtelung ist auf fünf Ebenen begrenzt.
+- Ein Fehler in einem Kettenglied wird protokolliert und übersprungen, statt die Bildauslieferung zu verhindern.
+
+> Das Konzept stammt aus dem Addon [media_chain](https://github.com/FriendsOfREDAXO/media_chain) und wird hier auf dem bereits geladenen Bildobjekt ausgeführt.
+
+## Backend-Seiten
+
+**Media Manager › srcset & Sets**
+
+1. **Übersicht** – alle registrierten Sets mit Ratio, Modus, Stufen, Standardbreite, Quelle und Beispiel-Typ.
+2. **Sets & Builder** – Sets anlegen, bearbeiten, aktivieren/deaktivieren, löschen und deren Cache leeren. Dazu:
+   - **Assistent**, der Breitenstufen aus Container-Breite, Spaltenzahl, Bildanteil, Retina und Breakpoints ableitet, auf 100 px rundet und zu dichte Stufen ausdünnt.
+   - **Nutzung & Bestand** – welche Sets und Breiten Module und Templates tatsächlich anfordern und wie breit die Originalbilder im Medienpool sind, mit Hinweisen auf überflüssige oder fehlende Stufen.
+   - **Vorschau & Test** – erzeugtes Markup, alle Varianten mit tatsächlicher Pixelbreite und Dateigröße, Descriptor-Check und eine Simulation der Browser-Auswahl.
+3. **Demo & Prüfung** – dieselbe Prüfung für frei wählbare Layout-Parameter, inklusive Live-Anzeige, welche Variante der Browser gerade geladen hat.
+4. **Einstellungen** – Schalter für die HTML-Platzhalterersetzung.
+5. **Hilfe** – diese Datei.
+
+## Welchen Weg wählen?
+
+- **Bestandsprojekt mit eingerichteten Media-Manager-Typen:** beim Effekt `srcset` bleiben. Es besteht kein Migrationsdruck.
+- **Neues Projekt oder viele ähnliche Bildformate:** Sets verwenden. Weniger DB-Typen, Breitenstufen entstehen bei Bedarf, `sizes` wird aus dem Layout berechnet und der Alt-Text kommt aus dem dafür vorgesehenen Feld.
+- **Beides gleichzeitig** ist ausdrücklich vorgesehen: `hero__400` und `is_ratio_4_3__800` stören sich nicht.
+
+## Zusammenspiel mit anderen Addons
+
+- **focuspoint** – Ratio-Zuschnitte folgen dem im Medienpool gesetzten Fokuspunkt (`med_focuspoint`); ohne das Addon wird zentriert geschnitten.
+- **media_negotiator** – liefert WebP/AVIF nach `Accept`-Header; der Cache-Pfad wird pro Format getrennt. Ohne das Addon werden JPG/PNG ausgeliefert.
+- **MediaPlace / metainfo_lang_fields** – Quellen für den Alt-Text der Sets.
+- SVG und GIF werden unverändert ausgeliefert.
+
+## Cache und Fehlersuche
+
+- Nach Änderungen an Sets oder Effekten: Media Manager › Cache löschen, oder auf *Sets & Builder* den Cache des betroffenen Sets leeren.
+- Ein Typ wie `is_ratio_4_3__700` liefert die nächsthöhere Stufe (800); unbekannte Sets fallen auf das Original zurück.
+- Sehr große Originale brauchen beim ersten Aufruf spürbar Rechenzeit; danach kommt alles aus dem Cache.
+- Bricht die Erzeugung ab (leeres Bild), fehlt meist Speicher (`memory_limit`) oder das Original ist beschädigt.
 
 ## Sicherheit
 
-Alle über `getTag()`/`getImgTag()`/`getPictureTag()` erzeugten Attributwerte werden HTML-escaped (`rex_escape()`), inklusive des automatischen `alt`-Fallbacks auf den Medienpool-Titel. Attributnamen aus `$attributes` werden gegen ein festes Muster (`/^[a-zA-Z_:][-a-zA-Z0-9_:.]*$/`) validiert. `getSrcSet()` liefert bewusst einen **unescapten** Rohwert für eigene Verwendungszwecke – wird er direkt in HTML eingebaut, muss selbst escaped werden.
+Alle erzeugten Attributwerte werden HTML-escaped (`rex_escape()`), inklusive des `alt`-Fallbacks. Attributnamen werden gegen `/^[a-zA-Z_:][-a-zA-Z0-9_:.]*$/` validiert, was Attribut-Injection über `$attributes`-Keys verhindert. `getSrcSet()` liefert bewusst einen unescapten Rohwert für eigene Verwendungszwecke.
 
 ## Anforderungen
 
-- REDAXO `^5.4.0`
+- REDAXO `^5.18.0`
 - Addon `media_manager` `^2.5.6`
-- PHP `>=7.3` (getestet bis PHP 8.4)
+- PHP `>= 8.1` (getestet bis PHP 8.4)
+
+## API-Dokumentation
+
+Vollständige Referenz beider APIs: [API.md](API.md) · [English](API.en.md)
 
 ## Changelog
 
 Siehe [CHANGELOG.md](CHANGELOG.md).
 
-## Credits
+## Lizenz
 
-* [GitHub-Repository](https://github.com/FriendsOfREDAXO/media_srcset)
+MIT · [GitHub-Repository](https://github.com/FriendsOfREDAXO/media_srcset)

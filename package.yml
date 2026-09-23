@@ -1,11 +1,40 @@
 package: media_srcset
-version: '2.3.0'
+version: '3.0.0'
 author: Friends Of REDAXO
 supportpage: https://github.com/FriendsOfREDAXO/media_srcset
 
 requires:
     packages:
         media_manager: '^2.5.6'
-    redaxo: '^5.10.0'
+    redaxo: '^5.18.0'
     php:
-        version: '>=7.3'
+        version: '>=8.1'
+
+installer_ignore:
+    - .github
+    - .claude
+    - .gitignore
+
+# Backend-Seiten als Unterbereich des Media Managers (wie ffmpeg im Medienpool)
+pages:
+    media_manager/media_srcset:
+        title: 'translate:media_srcset_page_title'
+        perm: admin
+        icon: rex-icon fa-image
+        subpages:
+            overview:
+                title: 'translate:media_srcset_title'
+                icon: rex-icon fa-list
+            sets:
+                title: 'translate:media_srcset_sets'
+                icon: rex-icon fa-sliders
+            demo:
+                title: 'translate:media_srcset_demo'
+                icon: rex-icon fa-play-circle
+            settings:
+                title: 'translate:media_srcset_settings'
+                icon: rex-icon fa-cog
+            help:
+                title: 'translate:media_srcset_help'
+                icon: rex-icon fa-question-circle
+                subPath: README.md

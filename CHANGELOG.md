@@ -7,6 +7,12 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [3.0.1] - 2026-10-10
+
+### Fixed (Behoben)
+
+- **Update von 2.x legt den Basistyp `media_srcset_set` an.** REDAXO führt bei einem Update `update.php` aus, nicht `install.php`; die fehlte, daher gab es nach dem Update keinen Basistyp und alle Set-Adressen (`/media/is_<set>__<breite>/…`) lieferten 404. Abhilfe bisher: Addon neu installieren. Neu: `update.php` bindet die (idempotente) `install.php` ein – damit greift beim Update auch die Voreinstellung der HTML-Platzhalterersetzung (an, wenn das Projekt den klassischen `srcset`-Effekt nutzt).
+
 ## [3.0.0] - 2026-09-23
 
 Major-Release mit einem zweiten, neuen Weg zur responsiven Bildausgabe: **Sets**. Statt für jeden Bildausschnitt einen eigenen Media-Manager-Typ zu pflegen, stecken Seitenverhältnis, Zuschnittsmodus und Breitenstufen in einer Konfigurationseinheit – als PHP-Array im Code oder als Formular im Backend.
